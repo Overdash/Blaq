@@ -1,9 +1,17 @@
 package playground;
 
+import playground.Collections.ILookup;
+import playground.Collections.Lookup;
+
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Iterator;
 import java.util.function.*;
 
+/**
+ * Class filled with helper methods. Equivalent of IEnumerable in Java is Iterable... however, for convenience
+ * Iterable and Collection interfaces will be used where sensible.
+ */
 public class Enumerable {
 
     // Refactor Collection to Iterable. -- Make a helper method to check arguments
@@ -44,7 +52,7 @@ public class Enumerable {
         return result;
     }
 
-    // SelectMany - O(n^2)
+    // SelectMany - O(n^2) -> T S U
     public static <TSource, TSubsequence, TResult> Iterable<TResult> projectMany(Iterable<TSource> source,
                                                                                  Function<TSource, Iterable<TSubsequence>> projector,
                                                                                  BiFunction<TSource, TSubsequence, TResult> resultProjector){
@@ -64,6 +72,20 @@ public class Enumerable {
         for(TSource item : source)
             for(TSubsequence subItem : projector.apply(item))
                 result.add(resultProjector.apply(item, subItem));
+        return result;
+    }
+
+    // ToLookup
+    public static <S, K> ILookup<K, S> toLookup(Iterable<S> source, Function<S, K> keySelector){
+        return toLookup(source, keySelector, e -> e);
+    }
+
+    public static <S, K, V>  ILookup<K, V> toLookup(Iterable<S> source, Function<S, K> keySelector,
+                                                    Function<S, V> valSelector){
+        Lookup<K, V> result = new Lookup<>();
+        for(S item : source)
+            result.add(keySelector.apply(item), valSelector.apply(item));
+
         return result;
     }
 }
