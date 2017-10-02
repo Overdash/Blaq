@@ -1,11 +1,14 @@
 package playground;
 
+import org.jetbrains.annotations.NotNull;
 import playground.Collections.ILookup;
 import playground.Collections.Lookup;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Iterator;
 import java.util.function.*;
+
 
 /**
  * Class filled with helper methods. Equivalent of IEnumerable in Java is Iterable... however, for convenience
@@ -74,7 +77,7 @@ public class Enumerable {
         return result;
     }
 
-    // ToLookup
+    // ToLookup -- Conduct testing for all functions before continuing!
     public static <S, K> ILookup<K, S> toLookup(Iterable<S> source, Function<S, K> keySelector){
         return toLookup(source, keySelector, e -> e);
     }
@@ -87,4 +90,20 @@ public class Enumerable {
 
         return result;
     }
+
+    // Empty. Caches (hence special class)
+    public static <TResult> Iterable<TResult> empty(){
+        return null;
+    }
+
+    // GroupJoin
+    public static <TOuter, TInner, TKey, TResult> Iterable<TResult> GroupJoin(Iterable<TOuter> outer, Iterable<TInner> inner,
+                                                                              Function<TOuter, TKey> outerKeySelector,
+                                                                              Function<TInner, TKey> innerKeySelector,
+                                                                              BiFunction<TOuter, Iterable<TInner>, TResult> resultSelector){
+        return null; // Implement later
+    }
+
+    /* --------------------Nested Classes---------------------- */
+
 }
