@@ -7,6 +7,7 @@ import playground.Collections.Lookup;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
+import playground.FillerKeywords.Yield;
 import java.util.function.*;
 
 
@@ -27,14 +28,32 @@ public class Enumerable {
         return whereImp(source, predicate);
     }
 
-    private static <T> Iterable<T> whereImp(Iterable<T> source, Predicate<T> predicate) {
-        Collection<T> result = new ArrayList<>();
-        for(T item: source)
-            if(predicate.test(item))
-                result.add(item);
-        return result;
+    private static <T> Yield<T> whereImp(Iterable<T> source, Predicate<T> predicate) {
+        return yield -> {
+            for(T item: source)
+                if(predicate.test(item))
+                    yield.returning(item);
+        };
     }
 
+    public static <T> Iterable<T> where(Iterable<T> source, BiPredicate<T, Integer> predicate){
+        if(source == null)
+            throw new NullArgumentException("source");
+        if(predicate == null)
+            throw new NullArgumentException("predicate");
+        return whereImp(source, predicate);
+    }
+
+    private static <T> Yield<T> whereImp(Iterable<T> source, BiPredicate<T, Integer> predicate){
+        return yield -> {
+            int i = 0;
+            for(T item : source){
+                if(predicate.test(item, i))
+                    yield.returning(item);
+                i++;
+            }
+        };
+    }
 
     // Select - O(n)
     public static <TSource, TResult> Iterable<TResult> project(Iterable<TSource> source,

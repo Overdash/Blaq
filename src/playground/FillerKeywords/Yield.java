@@ -3,7 +3,6 @@ package playground.FillerKeywords;
 import org.jetbrains.annotations.NotNull;
 import playground.Collections.ClosableIterator;
 
-import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -11,6 +10,10 @@ import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static playground.FillerKeywords.ExceptionHandles.unchecked;
+import static playground.FillerKeywords.Yield.Completed.completed;
+import static playground.FillerKeywords.Yield.FlowControl.proceed;
+import static playground.FillerKeywords.Yield.IfAbsent.ifAb;
+import static playground.FillerKeywords.Yield.Message.message;
 
 /**
  *
@@ -21,7 +24,7 @@ public interface Yield<T> extends Iterable<T> {
     void execute(YieldDef<T> builder);
 
     @NotNull
-    default ClosableIterator<T> iterator(){ // Manipulate it so that it always closes when it 'hasNext' Fails in the YieldDef. Make this return type Iterator<T>.
+    default ClosableIterator<T> iterator(){ // Originally returned ClosableIterator<T> -  Can change to Iterable<T>
         YieldDef<T> yieldDef = new YieldDef<>();
         Thread collector = new Thread(() -> {
             yieldDef.waitUntilFirstValueRequested();
@@ -53,14 +56,18 @@ public interface Yield<T> extends Iterable<T> {
 
         @Override
         public void close() {
+            System.out.println("Closing " + this);
             toTunOnClose.forEach(Runnable::run);
         }
 
         @Override
         public boolean hasNext() {
             calculateNextVal();
-            Message<T> message = unchecked(dataChannel::take);
-            if(message instanceof Completed) return false;
+            Message<T> message = unchecked(() -> dataChannel.take());
+            if(message instanceof Completed){
+                close();
+                return false;
+            }
             currentValue.set(message.value());
             return true;
         }
@@ -68,7 +75,7 @@ public interface Yield<T> extends Iterable<T> {
         @Override
         public T next() {
             try {
-                IfAbsent.ifAb(currentValue.get()).then(this::hasNext);
+                ifAb(currentValue.get()).then(this::hasNext);
                 return currentValue.get().get();
             } finally {
                 currentValue.set(Optional.empty());
@@ -77,12 +84,11 @@ public interface Yield<T> extends Iterable<T> {
 
         public void returning(T val){
             publish(val);
-            waitUntilFirstValueRequested();
+            waitUntilNextValueRequested();
         }
 
         private void publish(T val){
-            unchecked(() -> dataChannel.put(Message.message(val)));
-            waitUntilFirstValueRequested(); // Try replace with other method
+            unchecked(() -> dataChannel.put(message(val)));
         }
 
         private void waitUntilFirstValueRequested(){
@@ -94,7 +100,7 @@ public interface Yield<T> extends Iterable<T> {
         }
 
         private void calculateNextVal(){
-            unchecked(() -> flowChannel.put(FlowControl.proceed));
+            unchecked(() -> flowChannel.put(proceed));
         }
 
         public void breaking(){
@@ -102,7 +108,7 @@ public interface Yield<T> extends Iterable<T> {
         }
 
         public void signalComplete(){
-            unchecked(() -> this.dataChannel.put(Completed.completed()));
+            unchecked(() -> this.dataChannel.put(completed()));
         }
 
         @Override
@@ -144,7 +150,7 @@ public interface Yield<T> extends Iterable<T> {
     }
 
     interface FlowControl {
-        static FlowControl proceed = new FlowControl() {};
+        FlowControl proceed = new FlowControl() {};
     }
 
     interface Then<T> {
