@@ -19,6 +19,5 @@ public final class ThrowingIterable implements Iterable<Integer> {
         Iterable<T> result = deferredExecution.apply(source);
         Iterator<T> it = result.iterator();
         Assertions.assertThrows(UnsupportedOperationException.class, it::next);
-
     }
 }

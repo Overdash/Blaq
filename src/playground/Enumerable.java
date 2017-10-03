@@ -4,22 +4,32 @@ import org.jetbrains.annotations.NotNull;
 import playground.Collections.ILookup;
 import playground.Collections.Lookup;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Iterator;
+import java.util.*;
+
 import playground.FillerKeywords.Yield;
+
 import java.util.function.*;
 
 
 /**
  * Class filled with helper methods. Equivalent of IEnumerable in Java is Iterable... however, for convenience
  * Iterable and Collection interfaces will be used where sensible.
+ * Uses a Java implementation of Yield to allow a Collection/ Iterable to be used before all values are returned.
  */
 public class Enumerable {
 
-    // Refactor Collection to Iterable. -- Make a helper method to check arguments
+    // Refactor Collection to Iterable. -- Check deferred execution
 
-    // Where - O(n)
+    // ----------------------------- Where - O(n) -----------------------------
+
+    /**
+     * Filters a sequence based on a predicate.
+     * @param source An {@code Iterable} to be filtered.
+     * @param predicate Rule to apply on each element.
+     * @param <T> Type of elements.
+     * @return Output sequence, with elements which conformed to the rule.
+     * Output Sequence is the same element type as input
+     */
     public static <T> Iterable<T> where(Iterable<T> source, Predicate<T> predicate){
         if(source == null)
             throw new NullArgumentException("source");
@@ -36,6 +46,14 @@ public class Enumerable {
         };
     }
 
+    /**
+     * Filters a sequence based on a predicate.
+     * Each element's index is used in the logic of the predicate function.
+     * @param source An {@code Iterable} to be filtered.
+     * @param predicate Rule to apply on each element; the second parameter of the function represents the index of the source element.
+     * @param <T> Type of elements
+     * @return Output sequence, with elements which conformed to the rule.
+     */
     public static <T> Iterable<T> where(Iterable<T> source, BiPredicate<T, Integer> predicate){
         if(source == null)
             throw new NullArgumentException("source");
@@ -55,7 +73,7 @@ public class Enumerable {
         };
     }
 
-    // Select - O(n)
+    // ----------------------------- Select - O(n) -----------------------------
     public static <TSource, TResult> Iterable<TResult> project(Iterable<TSource> source,
                                                                Function<TSource, TResult> projector){
         if(source == null)
@@ -70,6 +88,16 @@ public class Enumerable {
         Collection<TResult> result = new ArrayList<>();
         for(TSource item : source)
             result.add(projector.apply(item));
+        return result;
+    }
+
+    // ----------------------------- ToList - O(n) -----------------------------
+    public static <T> List<T> toList(Iterable<T> src){
+        if(src == null)
+            throw new NullArgumentException("source");
+        List<T> result = new ArrayList<>();
+        for(T item: src)
+            result.add(item);
         return result;
     }
 

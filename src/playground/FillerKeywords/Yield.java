@@ -16,7 +16,8 @@ import static playground.FillerKeywords.Yield.IfAbsent.ifAb;
 import static playground.FillerKeywords.Yield.Message.message;
 
 /**
- *
+ * Threading implementation of C#'s yield-break and yield-return functionality.
+ * Able to produce generators with this class. Values are generated one at a time rather than at once on execution.
  * @param <T>
  */
 public interface Yield<T> extends Iterable<T> {
@@ -41,6 +42,10 @@ public interface Yield<T> extends Iterable<T> {
         return yieldDef.iterator();
     }
 
+    /**
+     * Nested class defining the properties and behaviors of the yield. Each yield must be disposed of (closed) to free threads.
+     * @param <T>
+     */
     class YieldDef<T> implements Iterable<T>, ClosableIterator<T> {
 
         private final SynchronousQueue<Message<T>> dataChannel = new SynchronousQueue<>();
@@ -63,7 +68,7 @@ public interface Yield<T> extends Iterable<T> {
         @Override
         public boolean hasNext() {
             calculateNextVal();
-            Message<T> message = unchecked(() -> dataChannel.take());
+            Message<T> message = unchecked(dataChannel::take);
             if(message instanceof Completed){
                 close();
                 return false;
