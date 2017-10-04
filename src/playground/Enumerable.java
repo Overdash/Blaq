@@ -19,6 +19,7 @@ import java.util.function.*;
 public class Enumerable {
 
     // Refactor Collection to Iterable. -- Check deferred execution
+    // Think of adding where List.
 
     // ----------------------------- Where - O(n) -----------------------------
 
@@ -83,12 +84,32 @@ public class Enumerable {
         return projectionImp(source, projector);
     }
 
-    private static <TSource, TResult> Iterable<TResult> projectionImp(Iterable<TSource> source,
+    private static <TSource, TResult> Yield<TResult> projectionImp(Iterable<TSource> source,
                                                                       Function<TSource, TResult> projector){
-        Collection<TResult> result = new ArrayList<>();
-        for(TSource item : source)
-            result.add(projector.apply(item));
-        return result;
+        return yield -> {
+            for(TSource item: source)
+                yield.returning(projector.apply(item));
+        };
+    }
+
+    public static <TSource, TResult> Iterable<TResult> project(Iterable<TSource> source,
+                                                               BiFunction<TSource, Integer, TResult> projector){
+        if(source == null)
+            throw new NullArgumentException("source");
+        if(projector == null)
+            throw new NullArgumentException("projector");
+        return projectionImp(source, projector);
+    }
+
+    private static <TSource, TResult> Yield<TResult> projectionImp(Iterable<TSource> source,
+                                                                   BiFunction<TSource, Integer, TResult> projector){
+        return yield -> {
+            int i = 0;
+            for(TSource item: source) {
+                yield.returning(projector.apply(item, i));
+                i++;
+            }
+        };
     }
 
     // ----------------------------- ToList - O(n) -----------------------------
@@ -100,6 +121,9 @@ public class Enumerable {
             result.add(item);
         return result;
     }
+
+    // ----------------------------- toMap - O(n) -----------------------------
+    // Can make it so it can take an Iterable of Values and a List/ Iterable for the Indexes
 
     // SelectMany - O(n^2) -> T S U
     public static <TSource, TSubsequence, TResult> Iterable<TResult> projectMany(Iterable<TSource> source,

@@ -3,6 +3,8 @@ package playground.test;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import playground.Collections.ClosableIterator;
+import playground.FillerKeywords.Yield;
 
 import java.util.Iterator;
 import java.util.function.Function;
@@ -16,8 +18,9 @@ public final class ThrowingIterable implements Iterable<Integer> {
 
     public static <T> void AssertDeferred(Function<Iterable<Integer>, Iterable<T>> deferredExecution){
         ThrowingIterable source = new ThrowingIterable();
-        Iterable<T> result = deferredExecution.apply(source);
-        Iterator<T> it = result.iterator();
-        Assertions.assertThrows(UnsupportedOperationException.class, it::next);
+        Yield<T> result = (Yield<T>)deferredExecution.apply(source);
+        try(ClosableIterator<T> it = result.iterator()) {
+            Assertions.assertThrows(UnsupportedOperationException.class, it::next);
+        }
     }
 }

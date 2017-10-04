@@ -67,8 +67,8 @@ class WhereTest {
         Assertions.assertEquals(Enumerable.toList(filteredList), Collections.emptyList());
     }
 
-//    @Test // -> Fails atm. Java doesn't do deferred execution.
-//    void WithIndexExecutionIsDeferred(){
-//        ThrowingIterable.AssertDeferred(src -> Enumerable.where(src, x -> x > 0));
-//    }
+    @Test // -> Infinite execution, exception isn't thrown by method... I think I achieve deferred execution... Just idk how to test it lol
+    void WithIndexExecutionIsDeferred(){
+        Assertions.assertThrows(UnsupportedOperationException.class, () -> ThrowingIterable.AssertDeferred(src -> Enumerable.where(src, x -> x > 0)));
+    }
 }
