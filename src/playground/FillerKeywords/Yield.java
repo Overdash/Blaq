@@ -62,7 +62,7 @@ public interface Yield<T> extends Iterable<T> {
 
         @Override
         public void close() {
-            System.out.println("Closing " + this);
+            System.out.println("Closing " + this); // -> Remove this
             toTunOnClose.forEach(Runnable::run);
         }
 

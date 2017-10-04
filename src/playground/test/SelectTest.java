@@ -45,14 +45,14 @@ class SelectTest {
     void simpleProjection(){
         Iterable<Integer> src = Arrays.asList(1,5,2);
         Iterable<Integer> projectedList = Enumerable.project(src, x->x*2);
-        Assertions.assertEquals(Enumerable.toList(projectedList), Arrays.asList(2,5,4));
+        Assertions.assertEquals(Enumerable.toList(projectedList), Arrays.asList(2,10,4));
     }
 
     @Test
     void simpleProjectionToDifferentType(){
         Iterable<Integer> src = Arrays.asList(1,5,2);
         Iterable<String> projectedList = Enumerable.project(src, Object::toString);
-        Assertions.assertEquals(Enumerable.toList(projectedList), Arrays.asList("2","5","4"));
+        Assertions.assertEquals(Enumerable.toList(projectedList), Arrays.asList("1","5","2"));
     }
 
     @Test
