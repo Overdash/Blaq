@@ -17,6 +17,7 @@ import java.util.function.*;
  * Uses a Java implementation of Yield to allow a Collection/ Iterable to be used before all values are returned.
  */
 public class Enumerable {
+    private Enumerable(){} //prevent creating instances of this class
 
     // Refactor Collection to Iterable. -- Check deferred execution
     // Think of adding where List.
@@ -36,15 +37,17 @@ public class Enumerable {
             throw new NullArgumentException("source");
         if(predicate == null)
             throw new NullArgumentException("predicate");
+//        Supplier<Iterable<T>> res = () -> whereImp(source, predicate); // For deferred Exe, this should be skipped when Ln 21 in ThrowingIterable is executed
+//        return res.get();
         return whereImp(source, predicate);
     }
 
-    private static <T> Yield<T> whereImp(Iterable<T> source, Predicate<T> predicate) {
-        return yield -> {
+    private static <T> Iterable<T> whereImp(Iterable<T> source, Predicate<T> predicate) {
+        return (Yield<T>) yield -> {
             for(T item: source)
                 if(predicate.test(item))
                     yield.returning(item);
-        };
+            };
     }
 
     /**
@@ -112,6 +115,102 @@ public class Enumerable {
         };
     }
 
+    // ----------------------------- Range -----------------------------
+    public static <T> Iterable<Integer> range(Iterable<T> src, int start, int count){
+        if(count < 0)
+            throw new ArgumentOutOfRangeException("count");
+
+        // Convert everything to long (avoid overflows)
+        if((long)start + (long)count - 1L > Integer.MAX_VALUE)
+            throw new ArgumentOutOfRangeException("count");
+
+        return rangeImp(src, start, count);
+    }
+
+    private static <T> Yield<Integer> rangeImp(Iterable<T> src, int start, int count){
+        return yield -> {
+          for (int i = 0; i < count; i++)
+              yield.returning(start+i);
+        };
+    }
+
+    // ----------------------------- Empty. Caches (hence special class) -----------------------------
+    //TODO: Empty -- Static generic fields are illegal in java (From JavaDoc: We cannot declare static fields whose types are type parameters)
+    public static <TResult> Iterable<TResult> empty(){
+        return null; // Need to implement this...
+    }
+
+    // ----------------------------- Repeat -----------------------------
+    public static <E> Iterable<E> repeat(E e, int count){
+        if(count < 0)
+            throw new ArgumentOutOfRangeException("count");
+        return repeatImp(e,count);
+    }
+
+    private static <E> Iterable<E> repeatImp(E e, int count) {
+        return (Yield<E>) yield -> {
+          for(int i=0; i < count; i++)
+              yield.returning(e);
+        };
+    }
+
+    // ----------------------------- Count & LongCount (Use immediate exec) -----------------------------
+    // ----------------------------- Might be useless for Java... -----------------------------
+    public static <T> int count(Iterable<T> src){
+        if(src == null)
+            throw new NullArgumentException("src");
+        Collection<T> c = (Collection<T>) src;
+
+        return c.size();
+    }
+
+    public static <T> int count(Iterable<T> src, Predicate<T> predicate){
+        if(src == null)
+            throw new NullArgumentException("src");
+        if(predicate == null)
+            throw new NullArgumentException("predicate");
+        int count = 0;
+        for(T item : src){
+            if(predicate.test(item)){
+                if(count >= Integer.MAX_VALUE)
+                    throw new ArithmeticException("count overflow");
+                else
+                    count++;
+            }
+        }
+        return count;
+    }
+
+    public static <T> long longCount(Iterable<T> src){
+        return 0;
+
+    }
+
+    public static <T> long longCount(Iterable<T> src, Predicate<T> predicate){
+        return 0;
+
+    }
+
+    // ----------------------------- Concat -----------------------------
+    // TODO Prepend/ Append (MoreLINQ)
+    public static <T> Iterable<T> concat(Iterable<T> first, Iterable<T> second){
+        if(first == null)
+            throw new NullArgumentException("first");
+        if(second == null)
+            throw new NullArgumentException("second");
+        return concatImp(first,second);
+    }
+
+    private static <T> Iterable<T> concatImp(Iterable<T> first, Iterable<T> second) {
+        return (Yield<T>) yield -> {
+            for(T item: first)
+                yield.returning(item);
+            // if possible, make first null to allow GC to collect it.
+            for(T item: second)
+                yield.returning(item);
+        };
+    }
+
     // ----------------------------- ToList - O(n) -----------------------------
     public static <T> List<T> toList(Iterable<T> src){
         if(src == null)
@@ -126,9 +225,9 @@ public class Enumerable {
     // Can make it so it can take an Iterable of Values and a List/ Iterable for the Indexes
 
     // SelectMany - O(n^2) -> T S U
-    public static <TSource, TSubsequence, TResult> Iterable<TResult> projectMany(Iterable<TSource> source,
-                                                                                 Function<TSource, Iterable<TSubsequence>> projector,
-                                                                                 BiFunction<TSource, TSubsequence, TResult> resultProjector){
+    public static <TSource, TSub, TResult> Iterable<TResult> projectMany(Iterable<TSource> source,
+                                                                         Function<TSource, Iterable<TSub>> projector,
+                                                                         BiFunction<TSource, TSub, TResult> resultProjector){
         if(source == null)
             throw new NullArgumentException("source");
         if(projector == null)
@@ -138,17 +237,17 @@ public class Enumerable {
         return projectManyImp(source, projector, resultProjector);
     }
 
-    private static <TSource, TSubsequence, TResult> Iterable<TResult> projectManyImp(Iterable<TSource> source,
-                                                                                 Function<TSource, Iterable<TSubsequence>> projector,
-                                                                                 BiFunction<TSource, TSubsequence, TResult> resultProjector){
-        Collection<TResult> result = new ArrayList<>();
-        for(TSource item : source)
-            for(TSubsequence subItem : projector.apply(item))
-                result.add(resultProjector.apply(item, subItem));
-        return result;
+    private static <TSource, TSub, TResult> Iterable<TResult> projectManyImp(Iterable<TSource> source,
+                                                                             Function<TSource, Iterable<TSub>> projector,
+                                                                             BiFunction<TSource, TSub, TResult> resultProjector){
+        return (Yield<TResult>) yield -> {
+            for(TSource item : source)
+                for(TSub subItem : projector.apply(item))
+                    yield.returning(resultProjector.apply(item, subItem));
+        };
     }
 
-    // ToLookup -- Conduct testing for all functions before continuing!
+    // ----------------------------- ToLookup -----------------------------
     public static <S, K> ILookup<K, S> toLookup(Iterable<S> source, Function<S, K> keySelector){
         return toLookup(source, keySelector, e -> e);
     }
@@ -162,12 +261,7 @@ public class Enumerable {
         return result;
     }
 
-    // Empty. Caches (hence special class)
-    public static <TResult> Iterable<TResult> empty(){
-        return null;
-    }
-
-    // GroupJoin
+    // ----------------------------- GroupJoin -----------------------------
     public static <TOuter, TInner, TKey, TResult> Iterable<TResult> GroupJoin(Iterable<TOuter> outer, Iterable<TInner> inner,
                                                                               Function<TOuter, TKey> outerKeySelector,
                                                                               Function<TInner, TKey> innerKeySelector,
@@ -177,4 +271,23 @@ public class Enumerable {
 
     /* --------------------Nested Classes---------------------- */
 
+    private static class EmptyIterable<T> implements Iterable<T>, Iterator<T>{
+
+        @NotNull
+        @Override
+        public Iterator<T> iterator() {
+            return null;
+        }
+
+        @Override
+        public boolean hasNext() {
+            return false;
+        }
+
+        @Override
+        public T next() {
+            return null;
+        }
+
+    }
 }

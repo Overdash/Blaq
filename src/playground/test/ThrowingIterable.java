@@ -2,7 +2,6 @@ package playground.test;
 
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Test;
 import playground.Collections.ClosableIterator;
 import playground.FillerKeywords.Yield;
 

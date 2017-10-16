@@ -34,6 +34,7 @@ public interface Yield<T> extends Iterable<T> {
                 execute(yieldDef);
             } catch (BreakException e){
                 //Might add logger here to experiment.
+                System.out.println("broke");
             }
             yieldDef.signalComplete();
         });
