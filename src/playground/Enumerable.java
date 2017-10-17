@@ -1,6 +1,7 @@
 package playground;
 
 import org.jetbrains.annotations.NotNull;
+import playground.Collections.ClosableIterator;
 import playground.Collections.ILookup;
 import playground.Collections.Lookup;
 
@@ -15,10 +16,13 @@ import java.util.function.*;
  * Class filled with helper methods. Equivalent of IEnumerable in Java is Iterable... however, for convenience
  * Iterable and Collection interfaces will be used where sensible.
  * Uses a Java implementation of Yield to allow a Collection/ Iterable to be used before all values are returned.
+ * Methods are decoupled to prevent bugs/ errors in one implementation from contaminating other implementations.
+ * @since BLAQ v0
  */
 public class Enumerable {
     private Enumerable(){} //prevent creating instances of this class
 
+    //TODO Might create a one-argument constructor that takes an iterable and wraps it with Enumerable methods
     // Refactor Collection to Iterable. -- Check deferred execution
     // Think of adding where List.
 
@@ -155,7 +159,15 @@ public class Enumerable {
     }
 
     // ----------------------------- Count & LongCount (Use immediate exec) -----------------------------
-    // ----------------------------- Might be useless for Java... -----------------------------
+    // ----------------------------- Might be useless for Java... but !For SQL count(*) -----------------------------
+
+    /**
+     * Returns the number of elements in a sequence.
+     * @param src A sequence that contains elements to be counted.
+     * @param <T> The type of the elements of source.
+     * @return The number of elements in the input sequence.
+     * @throws NullArgumentException Thrown when {@code src} is null.
+     */
     public static <T> int count(Iterable<T> src){
         if(src == null)
             throw new NullArgumentException("src");
@@ -164,6 +176,15 @@ public class Enumerable {
         return c.size();
     }
 
+    /**
+     * Returns a number that represents how many elements in the specified sequence satisfy a condition.
+     * @param src A sequence that contains elements to be tested and counted.
+     * @param predicate A function to test each element for a condition.
+     * @param <T> The type of the elements of source.
+     * @return A number that represents how many elements in the sequence satisfy the condition in the predicate function.
+     * @throws NullArgumentException Thrown when {@code src} or {@code predicate} is null.
+     * @throws ArithmeticException When the count of {@code src} is greater than {@code Integer.MAX_VALUE}
+     */
     public static <T> int count(Iterable<T> src, Predicate<T> predicate){
         if(src == null)
             throw new NullArgumentException("src");
@@ -173,22 +194,51 @@ public class Enumerable {
         for(T item : src){
             if(predicate.test(item)){
                 if(count >= Integer.MAX_VALUE)
-                    throw new ArithmeticException("count overflow");
-                else
-                    count++;
+                    throw new ArithmeticException("Integer overflow");
+                else count++;
             }
         }
         return count;
     }
 
+    /**
+     * Returns the number of elements in a sequence as a {@link Long}.
+     * @param src A sequence that contains elements to be counted.
+     * @param <T> The type of the elements of source.
+     * @return The {@link Long} number of elements in the input sequence.
+     * @throws NullArgumentException Thrown when {@code src} is null.
+     */
     public static <T> long longCount(Iterable<T> src){
-        return 0;
+        if(src == null)
+            throw new NullArgumentException("src");
+        Collection<T> c = (Collection<T>) src;
 
+        return c.size();
     }
 
+    /**
+     * Returns a number that represents how many elements in the specified sequence satisfy a condition, as a {@link Long}.
+     * @param src A sequence that contains elements to be tested and counted.
+     * @param predicate A function to test each element for a condition.
+     * @param <T> The type of the elements of source.
+     * @return A {@link Long} number that represents how many elements in the sequence satisfy the condition in the predicate function.
+     * @throws NullArgumentException Thrown when {@code src} or {@code predicate} is null.
+     * @throws ArithmeticException When the count of {@code src} is greater than {@code Long.MAX_VALUE}
+     */
     public static <T> long longCount(Iterable<T> src, Predicate<T> predicate){
-        return 0;
-
+        if(src == null)
+            throw new NullArgumentException("src");
+        if(predicate == null)
+            throw new NullArgumentException("predicate");
+        long count = 0;
+        for(T item : src){
+            if(predicate.test(item)){
+                if(count >= Long.MAX_VALUE)
+                    throw new ArithmeticException("Long overflow");
+                else count++;
+            }
+        }
+        return count;
     }
 
     // ----------------------------- Concat -----------------------------
@@ -224,27 +274,193 @@ public class Enumerable {
     // ----------------------------- toMap - O(n) -----------------------------
     // Can make it so it can take an Iterable of Values and a List/ Iterable for the Indexes
 
-    // SelectMany - O(n^2) -> T S U
+    // ----------------------------- SelectMany - O(n^2) -> T S U -----------------------------
+    // Very important method, must understand it
+
+    /**
+     * Projects each element of a sequence to an {@link Iterable}, flattens the resulting sequences into one sequence,
+     * and invokes a result selector function on each element therein.
+     * @param source A sequence of values to project.
+     * @param colProjector A transform function to apply to each element of the input sequence.
+     * @param resultProjector A transform function to apply to each element of the intermediate sequence.
+     * @param <TSource> The type of the elements of source.
+     * @param <TSub> The type of the intermediate elements collected by colProjector.
+     * @param <TResult> The type of the elements of the resulting sequence.
+     * @return An {@link Iterable} whose elements are the result of invoking the one-to-many transform function
+     * {@code collectionSelector} on each element of source and then mapping each of those sequence elements and
+     * their corresponding {@code source} element to a result element.
+     * @throws NullArgumentException Thrown when {@code src}, {@code colProjector} or {@code resultProjector} is null.
+     */
     public static <TSource, TSub, TResult> Iterable<TResult> projectMany(Iterable<TSource> source,
-                                                                         Function<TSource, Iterable<TSub>> projector,
+                                                                         Function<TSource, Iterable<TSub>> colProjector,
                                                                          BiFunction<TSource, TSub, TResult> resultProjector){
         if(source == null)
             throw new NullArgumentException("source");
-        if(projector == null)
+        if(colProjector == null)
             throw new NullArgumentException("projector");
         if(resultProjector == null)
             throw new NullArgumentException("result projector");
-        return projectManyImp(source, projector, resultProjector);
+        return projectManyImp(source, colProjector, resultProjector);
     }
 
     private static <TSource, TSub, TResult> Iterable<TResult> projectManyImp(Iterable<TSource> source,
-                                                                             Function<TSource, Iterable<TSub>> projector,
+                                                                             Function<TSource, Iterable<TSub>> colProjector,
                                                                              BiFunction<TSource, TSub, TResult> resultProjector){
         return (Yield<TResult>) yield -> {
             for(TSource item : source)
-                for(TSub subItem : projector.apply(item))
+                for(TSub subItem : colProjector.apply(item))
                     yield.returning(resultProjector.apply(item, subItem));
         };
+    }
+
+    /**
+     * Projects each element of a sequence to an {@link Iterable}, flattens the resulting sequences into one sequence,
+     * and invokes a result selector function on each element therein.
+     * The index of each source element is used in the intermediate projected form of that element.
+     * @param src A sequence of values to project.
+     * @param colProjector A transform function to apply to each source element;
+     *                     the second parameter of the function represents the index of the source element.
+     * @param resultProjector A transform function to apply to each element of the intermediate sequence.
+     * @param <TSource> The type of the elements of source.
+     * @param <TSub> The type of the intermediate elements collected by colProjector.
+     * @param <TResult> The type of the elements of the resulting sequence.
+     * @return An {@link Iterable} whose elements are the result of invoking the one-to-many transform function
+     * {@code collectionSelector} on each element of source and then mapping each of those sequence elements and
+     * their corresponding {@code source} element to a result element.
+     * @throws NullArgumentException Thrown when {@code src}, {@code colProjector} or {@code resultProjector} is null.
+     */
+    public static <TSource, TSub, TResult> Iterable<TResult> projectMany(Iterable<TSource> src,
+                                                                         BiFunction<TSource, Integer, Iterable<TSub>> colProjector,
+                                                                         BiFunction<TSource, TSub, TResult> resultProjector){
+        if(src == null)
+            throw new NullArgumentException("source");
+        if(colProjector == null)
+            throw new NullArgumentException("colProjector");
+        if(resultProjector == null)
+            throw new NullArgumentException("result colProjector");
+        return projectManyImp(src, colProjector, resultProjector);
+    }
+
+    private static <TResult, TSub, TSource> Iterable<TResult> projectManyImp(Iterable<TSource> src,
+                                                                             BiFunction<TSource, Integer, Iterable<TSub>> colProjector,
+                                                                             BiFunction<TSource, TSub, TResult> resultProjector) {
+        return (Yield<TResult>) yield -> {
+            int i = 0;
+            for(TSource item : src)
+                for(TSub colItem : colProjector.apply(item, i++))
+                    yield.returning(resultProjector.apply(item, colItem));
+        };
+    }
+
+    /**
+     * Projects each element of a sequence to an {@link Iterable} and flattens the resulting sequences into one sequence.
+     * @param src A sequence of values to project.
+     * @param projector A transform function to apply to each element.
+     * @param <TSource> The type of the elements of source.
+     * @param <TResult> The type of the elements of the sequence returned by selector.
+     * @return An {@link Iterable} whose elements are the result of invoking the one-to-many
+     * transform function on each element of the input sequence.
+     * @throws NullArgumentException Thrown when {@code src} or {@code projector} is null.
+     */
+    public static <TSource, TResult> Iterable<TResult> projectMany(Iterable<TSource> src,
+                                                                   Function<TSource, Iterable<TResult>> projector){
+        if(src == null)
+            throw new NullArgumentException("src");
+        if(projector == null)
+            throw new NullArgumentException("projector");
+        return projectManyImp(src, projector);
+    }
+
+    private static <TResult, TSource> Iterable<TResult> projectManyImp(Iterable<TSource> src,
+                                                                       Function<TSource, Iterable<TResult>> projector) {
+        return (Yield<TResult>) yield -> {
+          for(TSource item : src)
+              for(TResult result : projector.apply(item))
+                  yield.returning(result);
+        };
+    }
+
+    /**
+     * Projects each element of a sequence to an {@link Iterable} and flattens the resulting sequences into one sequence.
+     * The index of each source element is used in the projected form of that element.
+     * @param src A sequence of values to project.
+     * @param projector A transform function to apply to each source element; the second parameter of the function represents the index of the source element.
+     * @param <TSource> The type of the elements of source.
+     * @param <TResult> The type of the elements of the sequence returned by selector.
+     * @return An {@link Iterable} whose elements are the result of invoking the one-to-many
+     * transform function on each element of the input sequence.
+     * @throws NullArgumentException Thrown when {@code src} or {@code projector} is null.
+     */
+    public static <TSource, TResult> Iterable<TResult> projectMany(Iterable<TSource> src,
+                                                                   BiFunction<TSource, Integer, Iterable<TResult>> projector){
+        if(src == null)
+            throw new NullArgumentException("src");
+        if(projector == null)
+            throw new NullArgumentException("projector");
+        return projectManyImp(src, projector);
+    }
+
+    private static <TResult, TSource> Iterable<TResult> projectManyImp(Iterable<TSource> src, BiFunction<TSource, Integer, Iterable<TResult>> projector) {
+        return (Yield<TResult>) yield -> {
+          int i = 0;
+          for(TSource item : src)
+              for(TResult result : projector.apply(item, i++))
+                  yield.returning(result);
+        };
+    }
+
+    // ----------------------------- Any -----------------------------
+
+    /**
+     * Determines whether a sequence contains any elements.
+     * @param src The {@link Iterable} to check for emptiness.
+     * @param <T> The type of the elements of source.
+     * @return {@code true} if the source sequence contains any elements; otherwise, {@code false}.
+     */
+    public static <T> boolean any(Iterable<T> src){
+        if(src == null)
+            throw new NullArgumentException("src");
+        try(ClosableIterator<T> iterator = (ClosableIterator<T>) src.iterator()){
+            return iterator.hasNext();
+        }
+    }
+
+    /**
+     * Determines whether any element of a sequence satisfies a condition.
+     * @param src An {@link Iterable} whose elements to apply the predicate to.
+     * @param predicate A function to test each element for a condition.
+     * @param <T> The type of the elements of source.
+     * @return {@code true} if any elements in the source sequence pass the test in the specified predicate; otherwise, {@code false}.
+     */
+    public static <T> boolean any(Iterable<T> src, Predicate<T> predicate){
+        if(src == null)
+            throw new NullArgumentException("src");
+        if(predicate == null)
+            throw new NullArgumentException("predicate");
+        for(T item : src)
+            if(predicate.test(item))
+                return true;
+        return false;
+    }
+
+    // ----------------------------- All -----------------------------
+
+    /**
+     * Determines whether all elements of a sequence satisfy a condition.
+     * @param src An {@link Iterable} that contains the elements to apply the predicate to.
+     * @param predicate A function to test each element for a condition.
+     * @param <T> The type of the elements of source.
+     * @return {@code true} if every element of the source sequence passes the test in the specified predicate, or if the sequence is empty; otherwise, {@code false}.
+     */
+    public static <T> boolean all(Iterable<T> src, Predicate<T> predicate){
+        if(src == null)
+            throw new NullArgumentException("src");
+        if(predicate == null)
+            throw new NullArgumentException("predicate");
+        for(T item : src)
+            if(!predicate.test(item))
+                return false;
+        return true;
     }
 
     // ----------------------------- ToLookup -----------------------------
