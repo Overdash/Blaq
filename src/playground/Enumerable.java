@@ -5,6 +5,7 @@ import playground.Collections.ClosableIterator;
 import playground.Collections.ILookup;
 import playground.Collections.Lookup;
 
+import java.io.Closeable;
 import java.util.*;
 
 import playground.FillerKeywords.Yield;
@@ -463,6 +464,49 @@ public class Enumerable {
         return true;
     }
 
+    // ----------------------------- First -----------------------------
+
+    public static <T> T first(Iterable<T> src){
+        if(src == null)
+            throw new NullArgumentException("src");
+        try(ClosableIterator<T> it = (ClosableIterator<T>)src.iterator()){
+            if(it.hasNext())
+                return it.next();
+            throw new InvalidOperationException("Empty sequence");
+        }
+    }
+
+    public static <T> T first(Iterable<T> src, Predicate<T> predicate){
+        if(src == null)
+            throw new NullArgumentException("src");
+        if(predicate == null)
+            throw new NullArgumentException("predicate");
+        for(T item : src)
+            if(predicate.test(item))
+                return item;
+        throw new InvalidOperationException("No items match the predicate");
+    }
+
+    // ----------------------------- FirstOrDefault -----------------------------
+
+    public static <T> T firstOrNull(Iterable<T> src){
+        if(src == null)
+            throw new NullArgumentException("src");
+        try(ClosableIterator<T> it = (ClosableIterator<T>)src.iterator()){
+            return it.hasNext() ? it.next() : null;
+        }
+    }
+
+    public static <T> T firstOrNull(Iterable<T> src, Predicate<T> predicate){
+        if(src == null)
+            throw new NullArgumentException("src");
+        if(predicate == null)
+            throw new NullArgumentException("predicate");
+        for(T item : src)
+            if(predicate.test(item))
+                return item;
+        return null;
+    }
     // ----------------------------- ToLookup -----------------------------
     public static <S, K> ILookup<K, S> toLookup(Iterable<S> source, Function<S, K> keySelector){
         return toLookup(source, keySelector, e -> e);
