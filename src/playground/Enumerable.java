@@ -35,7 +35,7 @@ public class Enumerable {
      * @param predicate Rule to apply on each element.
      * @param <T> Type of elements.
      * @return Output sequence, with elements which conformed to the rule.
-     * Output Sequence is the same element type as input
+     *         Output Sequence is the same element type as input.
      */
     public static <T> Iterable<T> where(Iterable<T> source, Predicate<T> predicate){
         if(source == null)
@@ -59,7 +59,8 @@ public class Enumerable {
      * Filters a sequence based on a predicate.
      * Each element's index is used in the logic of the predicate function.
      * @param source An {@code Iterable} to be filtered.
-     * @param predicate Rule to apply on each element; the second parameter of the function represents the index of the source element.
+     * @param predicate Rule to apply on each element;
+     *                  the second parameter of the function represents the index of the source element.
      * @param <T> Type of elements
      * @return Output sequence, with elements which conformed to the rule.
      */
@@ -142,7 +143,7 @@ public class Enumerable {
     // ----------------------------- Empty. Caches (hence special class) -----------------------------
     //TODO: Empty -- Static generic fields are illegal in java (From JavaDoc: We cannot declare static fields whose types are type parameters)
     public static <TResult> Iterable<TResult> empty(){
-        return null; // Need to implement this...
+        return null; // Need to implement this... Use HashMap/ ConcurrentHM
     }
 
     // ----------------------------- Repeat -----------------------------
@@ -288,8 +289,8 @@ public class Enumerable {
      * @param <TSub> The type of the intermediate elements collected by colProjector.
      * @param <TResult> The type of the elements of the resulting sequence.
      * @return An {@link Iterable} whose elements are the result of invoking the one-to-many transform function
-     * {@code collectionSelector} on each element of source and then mapping each of those sequence elements and
-     * their corresponding {@code source} element to a result element.
+     *         {@code collectionSelector} on each element of source and then mapping each of those sequence elements and
+     *         their corresponding {@code source} element to a result element.
      * @throws NullArgumentException Thrown when {@code src}, {@code colProjector} or {@code resultProjector} is null.
      */
     public static <TSource, TSub, TResult> Iterable<TResult> projectMany(Iterable<TSource> source,
@@ -326,8 +327,8 @@ public class Enumerable {
      * @param <TSub> The type of the intermediate elements collected by colProjector.
      * @param <TResult> The type of the elements of the resulting sequence.
      * @return An {@link Iterable} whose elements are the result of invoking the one-to-many transform function
-     * {@code collectionSelector} on each element of source and then mapping each of those sequence elements and
-     * their corresponding {@code source} element to a result element.
+     *         {@code collectionSelector} on each element of source and then mapping each of those sequence elements and
+     *         their corresponding {@code source} element to a result element.
      * @throws NullArgumentException Thrown when {@code src}, {@code colProjector} or {@code resultProjector} is null.
      */
     public static <TSource, TSub, TResult> Iterable<TResult> projectMany(Iterable<TSource> src,
@@ -360,7 +361,7 @@ public class Enumerable {
      * @param <TSource> The type of the elements of source.
      * @param <TResult> The type of the elements of the sequence returned by selector.
      * @return An {@link Iterable} whose elements are the result of invoking the one-to-many
-     * transform function on each element of the input sequence.
+     *         transform function on each element of the input sequence.
      * @throws NullArgumentException Thrown when {@code src} or {@code projector} is null.
      */
     public static <TSource, TResult> Iterable<TResult> projectMany(Iterable<TSource> src,
@@ -385,11 +386,12 @@ public class Enumerable {
      * Projects each element of a sequence to an {@link Iterable} and flattens the resulting sequences into one sequence.
      * The index of each source element is used in the projected form of that element.
      * @param src A sequence of values to project.
-     * @param projector A transform function to apply to each source element; the second parameter of the function represents the index of the source element.
+     * @param projector A transform function to apply to each source element;
+     *                  the second parameter of the function represents the index of the source element.
      * @param <TSource> The type of the elements of source.
      * @param <TResult> The type of the elements of the sequence returned by selector.
      * @return An {@link Iterable} whose elements are the result of invoking the one-to-many
-     * transform function on each element of the input sequence.
+     *         transform function on each element of the input sequence.
      * @throws NullArgumentException Thrown when {@code src} or {@code projector} is null.
      */
     public static <TSource, TResult> Iterable<TResult> projectMany(Iterable<TSource> src,
@@ -451,7 +453,8 @@ public class Enumerable {
      * @param src An {@link Iterable} that contains the elements to apply the predicate to.
      * @param predicate A function to test each element for a condition.
      * @param <T> The type of the elements of source.
-     * @return {@code true} if every element of the source sequence passes the test in the specified predicate, or if the sequence is empty; otherwise, {@code false}.
+     * @return {@code true} if every element of the source sequence passes the test in the specified predicate,
+     *         or if the sequence is empty; otherwise, {@code false}.
      */
     public static <T> boolean all(Iterable<T> src, Predicate<T> predicate){
         if(src == null)
@@ -466,6 +469,14 @@ public class Enumerable {
 
     // ----------------------------- First -----------------------------
 
+    /**
+     * Returns the first element of a sequence.
+     * @param src The {@link Iterable} to return the first element of.
+     * @param <T> The type of the elements of source.
+     * @return The first element in the specified sequence.
+     * @throws NullArgumentException if src is null
+     * @throws InvalidOperationException if source sequence is empty
+     */
     public static <T> T first(Iterable<T> src){
         if(src == null)
             throw new NullArgumentException("src");
@@ -476,6 +487,15 @@ public class Enumerable {
         }
     }
 
+    /**
+     * Returns the first element in a sequence that satisfies a specified condition.
+     * @param src An {@link Iterable} to return an element from.
+     * @param predicate A function to test each element for a condition.
+     * @param <T> The type of the elements of source.
+     * @return The first element in the sequence that passes the test in the specified predicate function.
+     * @throws NullArgumentException if src is null
+     * @throws InvalidOperationException if source sequence is empty
+     */
     public static <T> T first(Iterable<T> src, Predicate<T> predicate){
         if(src == null)
             throw new NullArgumentException("src");
@@ -488,7 +508,15 @@ public class Enumerable {
     }
 
     // ----------------------------- FirstOrDefault -----------------------------
+    // (Rename firstOrNull makes more sense for java)
 
+    /**
+     * Returns the first element of a sequence, or a default value if the sequence contains no elements.
+     * @param src The {@link Iterable} to return the first element of.
+     * @param <T> The type of the elements of source.
+     * @return {@code null} if source is empty; otherwise, the first element in source.
+     * @throws NullArgumentException if src is null
+     */
     public static <T> T firstOrNull(Iterable<T> src){
         if(src == null)
             throw new NullArgumentException("src");
@@ -497,6 +525,14 @@ public class Enumerable {
         }
     }
 
+    /**
+     * Returns the first element of the sequence that satisfies a condition or a default value if no such element is found.
+     * @param src An {@link Iterable} to return an element from.
+     * @param predicate A function to test each element for a condition.
+     * @param <T> The type of the elements of source.
+     * @return {@code null} if source is empty or if no element passes the test specified by {@code predicate};
+     *         otherwise, the first element in source that passes the test specified by {@code predicate}.
+     */
     public static <T> T firstOrNull(Iterable<T> src, Predicate<T> predicate){
         if(src == null)
             throw new NullArgumentException("src");
@@ -507,6 +543,157 @@ public class Enumerable {
                 return item;
         return null;
     }
+
+    // ----------------------------- Single -----------------------------
+
+    public static <T> T single(Iterable<T> src){
+        if(src == null)
+            throw new NullArgumentException("src");
+        try(ClosableIterator<T> it = (ClosableIterator<T>) src.iterator()){
+            if(!it.hasNext())
+                throw new InvalidOperationException("Sequence is empty");
+            T e = it.next();
+            if(it.hasNext())
+                throw new InvalidOperationException("Sequence has multiple elements");
+            return e;
+        }
+    }
+
+    public static <T> T single(Iterable<T> src, Predicate<T> predicate){
+        if(src == null)
+            throw new NullArgumentException("src");
+        if(predicate == null)
+            throw new NullArgumentException("predicate");
+        T e = null;
+        boolean found = false;
+        for(T i : src){
+            if(predicate.test(i)){
+                if(found)
+                    throw new InvalidOperationException("Sequence contains multiple matching elements");
+                found = true;
+                e = i;
+            }
+        }
+        if(!found)
+            throw new InvalidOperationException("Sequence has no matching elemetns");
+        return e;
+    }
+
+    // ----------------------------- SingleOrDefault -----------------------------
+    public static <T> T singleOrNull(Iterable<T> src){
+        if(src == null)
+            throw new NullArgumentException("src");
+        try(ClosableIterator<T> it = (ClosableIterator<T>)src.iterator()){
+            if(!it.hasNext())
+                return null;
+            T e = it.next();
+            if(it.hasNext())
+                throw new InvalidOperationException("Sequence contained multiple elements");
+            return e;
+        }
+    }
+
+    public static <T> T singleOrNull(Iterable<T> src, Predicate<T> predicate){
+        if(src == null)
+            throw new NullArgumentException("src");
+        if(predicate == null)
+            throw new NullArgumentException("predicate");
+        T e = null;
+        boolean found = false;
+        for(T i : src){
+            if(predicate.test(i)) {
+                if (found)
+                    throw new InvalidOperationException("Sequence contained multiple element");
+                found = true;
+                e = i;
+            }
+        }
+        return e;
+    }
+
+    // ----------------------------- Last -----------------------------
+    // Difficult. Should be O(1) but the toList call makes it O(n). Java lacks indexers so must work around.
+
+    /**
+     * Returns the last element of a sequence.
+     * @param src An {@link Iterable} to return the last element of.
+     * @param <T> The type of the elements of source.
+     * @return The value at the last position in the source sequence.
+     * @throws NullArgumentException if src is null.
+     * @throws InvalidOperationException if sequence is empty.
+     */
+    public static <T> T last(Iterable<T> src){
+        if(src == null)
+            throw new NullArgumentException("src");
+        try{
+            List<T> c = (List<T>)src;
+            if(c.size() == 0)
+                throw new InvalidOperationException("Sequence is empty");
+            return c.get(c.size() - 1);
+        } catch (ClassCastException ignored){}
+        try(ClosableIterator<T> it = (ClosableIterator<T>)src.iterator()){
+            if(!it.hasNext())
+               throw new  InvalidOperationException("Sequence is empty");
+            T last = it.next();
+            while(it.hasNext())
+                last = it.next();
+            return last;
+        }
+    }
+
+    /**
+     * Returns the last element of a sequence that satisfies a specified condition.
+     * @param src An {@link Iterable} to return an element from.
+     * @param predicate A function to test each element for a condition.
+     * @param <T> The type of the elements of source.
+     * @return The last element in the sequence that passes the test in the specified predicate function.
+     * @throws NullArgumentException if {@code src} or {@code predicate} is empty.
+     * @throws InvalidOperationException No element satisfies the condition in {@code predicate}.
+     */
+    public static <T> T last(Iterable<T> src, Predicate<T> predicate){
+        if(src == null)
+            throw new NullArgumentException("src");
+        if(predicate == null)
+            throw new NullArgumentException("predicate");
+        boolean found = false;
+        T last = null;
+        for(T item : src){
+            if(predicate.test(item)) {
+                found = true;
+                last = item;
+            }
+        }
+        if(!found)
+            throw new InvalidOperationException("No items matched the predicate");
+        return last;
+    }
+
+    // ----------------------------- LastOrDefault -----------------------------
+    public static <T> T lastOrDefault(Iterable<T> src){
+        if(src == null)
+            throw new NullArgumentException("src") ;
+        try{
+            List<T> c = (List<T>)src;
+            return c.size() == 0 ? null : c.get(c.size() - 1);
+        } catch (ClassCastException ignored){}
+        T last = null;
+        for(T i : src)
+            last = i;
+        return last;
+    }
+
+    public static <T> T lastOrDefault(Iterable<T> src, Predicate<T> predicate){
+        if(src == null)
+            throw new NullArgumentException("src");
+        if(predicate == null)
+            throw new NullArgumentException("predicate");
+        T last = null;
+        for(T i : src)
+            if(predicate.test(i))
+                last = i;
+        return last;
+    }
+
     // ----------------------------- ToLookup -----------------------------
     public static <S, K> ILookup<K, S> toLookup(Iterable<S> source, Function<S, K> keySelector){
         return toLookup(source, keySelector, e -> e);
