@@ -1,11 +1,8 @@
 package playground;
 
 import org.jetbrains.annotations.NotNull;
-import playground.Collections.ClosableIterator;
-import playground.Collections.ILookup;
-import playground.Collections.Lookup;
+import playground.Collections.*;
 
-import java.io.Closeable;
 import java.util.*;
 
 import playground.FillerKeywords.Yield;
@@ -26,6 +23,7 @@ public class Enumerable {
     //TODO Might create a one-argument constructor that takes an iterable and wraps it with Enumerable methods
     // Refactor Collection to Iterable. -- Check deferred execution
     // Think of adding where List.
+    // T - Source/ Primary Param. S - Secondary Param. R - Result/ Tertiary Param.
 
     // ----------------------------- Where - O(n) -----------------------------
 
@@ -694,6 +692,89 @@ public class Enumerable {
         return last;
     }
 
+    // ----------------------------- DefaultIfEmpty -----------------------------
+    // Default of Object types is always null in java.
+
+    public static <T> Iterable<T> defaultIfEmpty(Iterable<T> src){
+        return defaultIfEmpty(src, null);
+    }
+
+    public static <T> Iterable<T> defaultIfEmpty(Iterable<T> src, T defaultVal){
+        if(src == null)
+            throw new NullArgumentException("src");
+        
+        return defaultIfEmptyImp(src, defaultVal);
+    }
+
+    private static <T> Iterable<T> defaultIfEmptyImp(Iterable<T> src, T defaultVal) {
+        return (Yield<T>) yield -> {
+            boolean foundAny = false;
+            for(T i : src){
+              yield.returning(i);
+              foundAny = true;
+          }
+          if(!foundAny)
+              yield.returning(defaultVal);
+        };
+    }
+
+    // ----------------------------- Aggregate (IE)-----------------------------
+    public static <T> T aggregate(Iterable<T> src, BiFunction<T, T, T> function){
+        if(src == null)
+            throw new NullArgumentException("src");
+        if(function == null)
+            throw new NullArgumentException("function");
+
+        try(ClosableIterator<T> it = (ClosableIterator<T>) src.iterator()){
+            if(!it.hasNext())
+                throw new InvalidOperationException("Source sequence was empty");
+            T current = it.next();
+            while(it.hasNext())
+                current = function.apply(current, it.next());
+            return current;
+        }
+    }
+
+    public static <T, S> S aggregate(Iterable<T> src, S seed, BiFunction<S, T, S> function){
+        return aggregate(src, seed, function, x -> x);
+    }
+
+    public static <T, S, R> R aggregate(Iterable<T> src, S seed, BiFunction<S, T, S> function,
+                                        Function<S, R> resultProjector){
+        if(src == null)
+            throw new NullArgumentException("src");
+        if(function == null)
+            throw new NullArgumentException("function");
+        if(resultProjector == null)
+            throw new NullArgumentException("resultProjector");
+
+        S current = seed;
+        for(T item : src)
+            current = function.apply(current, item);
+        return resultProjector.apply(current);
+    }
+
+    // ----------------------------- Distinct (DE) ----------------------------- Set-based
+    // Need to create IEqualityComparer (ICompareEquality) -- Nothing like it exists in java.
+
+    public static <T> Iterable<T> distinct(Iterable<T> src){
+        throw new InvalidOperationException("!Implementation");
+    }
+
+    public static <T> Iterable<T> distinct(Iterable<T> src, ICompareEquality<T> compareEquality){
+        if(src == null)
+            throw new NullArgumentException("src");
+        return distinctImp(src, compareEquality != null ? compareEquality : CompareEquality.standard);
+    }
+
+    private static <T> Iterable<T> distinctImp(Iterable<T> src, ICompareEquality<T> compareEquality) {
+        HashSet<T> passedElements = new HashSet<>(); // Will have to adjust this to take the compareEquality
+        for(T item : src)
+            if(passedElements.add(item))
+                return (Yield<T>) yield -> yield.returning(item);
+        return null; // <-- Just because Yield returning doesn't work the same as in C#
+    }
+
     // ----------------------------- ToLookup -----------------------------
     public static <S, K> ILookup<K, S> toLookup(Iterable<S> source, Function<S, K> keySelector){
         return toLookup(source, keySelector, e -> e);
@@ -713,7 +794,7 @@ public class Enumerable {
                                                                               Function<TOuter, TKey> outerKeySelector,
                                                                               Function<TInner, TKey> innerKeySelector,
                                                                               BiFunction<TOuter, Iterable<TInner>, TResult> resultSelector){
-        return null; // Implement later
+        throw new InvalidOperationException("!Implementation");
     }
 
     /* --------------------Nested Classes---------------------- */
