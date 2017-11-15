@@ -325,7 +325,7 @@ public class Enumerable {
      * @param <TSub> The type of the intermediate elements collected by colProjector.
      * @param <TResult> The type of the elements of the resulting sequence.
      * @return An {@link Iterable} whose elements are the result of invoking the one-to-many transform function
-     *         {@code collectionSelector} on each element of source and then mapping each of those sequence elements and
+     *         {@code colProjector} on each element of source and then mapping each of those sequence elements and
      *         their corresponding {@code source} element to a result element.
      * @throws NullArgumentException Thrown when {@code src}, {@code colProjector} or {@code resultProjector} is null.
      */

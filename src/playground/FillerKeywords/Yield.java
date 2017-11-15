@@ -19,6 +19,7 @@ import static playground.FillerKeywords.Yield.Message.message;
  * Threading implementation of C#'s yield-break and yield-return functionality.
  * Able to produce generators with this class. Values are generated one at a time rather than at once on execution.
  * Alternatively, this could've been implemented with some bytecode or compiler transformations.
+ *
  * @param <T>
  */
 public interface Yield<T> extends Iterable<T> {
