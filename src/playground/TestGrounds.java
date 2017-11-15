@@ -1,7 +1,6 @@
 package playground;
 
 import org.junit.jupiter.api.Test;
-import playground.Collections.ClosableIterator;
 import playground.FillerKeywords.Yield;
 
 import java.util.*;

@@ -1,7 +1,7 @@
 package playground.FillerKeywords;
 
 import org.jetbrains.annotations.NotNull;
-import playground.Collections.ClosableIterator;
+import playground.util.ClosableIterator;
 
 import java.util.List;
 import java.util.Optional;

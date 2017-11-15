@@ -1,4 +1,4 @@
-package playground.Collections;
+package playground.util;
 
 public interface ILookup<K, E> extends Iterable<IGrouping<K, E>> {
 

@@ -1,4 +1,4 @@
-package playground.Collections;
+package playground.util;
 
 import org.jetbrains.annotations.NotNull;
 

@@ -1,4 +1,4 @@
-package playground.Collections;
+package playground.util;
 
 import org.jetbrains.annotations.NotNull;
 
@@ -7,20 +7,20 @@ import java.util.*;
 /**
  * Collection of keys mapped to one or more values.
  * @param <K>
- * @param <E>
+ * @param <V>
  */
-public class Lookup<K, E> implements ILookup<K, E> {
+public class Lookup<K, V> implements ILookup<K, V> {
 
-    private Map<K, List<E>> multimap = new HashMap<>();
+    private Map<K, List<V>> multimap = new HashMap<>();
 
-    public boolean add(K k, E e){
-        List<E> elements = new ArrayList<>();
+    public boolean add(K k, V v){
+        List<V> elements = new ArrayList<>();
         if(!multimap.containsKey(k)){
             multimap.put(k, elements);
-            elements.add(e);
+            elements.add(v);
             return true;
         } else {
-            elements.add(e);
+            elements.add(v);
             return false;
         }
     }
@@ -36,15 +36,15 @@ public class Lookup<K, E> implements ILookup<K, E> {
     }
 
     @Override
-    public Iterable<E> getItem(K key) {
+    public Iterable<V> getItem(K key) {
         return multimap.get(key);
     }
 
     @NotNull
     @Override
-    public Iterator<IGrouping<K, E>> iterator() {
-        Collection<IGrouping<K, E>> result = new ArrayList<>();
-        for(Map.Entry<K, List<E>> pair : multimap.entrySet())
+    public Iterator<IGrouping<K, V>> iterator() {
+        Collection<IGrouping<K, V>> result = new ArrayList<>();
+        for(Map.Entry<K, List<V>> pair : multimap.entrySet())
             result.add(new Grouping<>(pair.getKey(), pair.getValue()));
         return result.iterator();
     }

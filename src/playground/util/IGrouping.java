@@ -1,4 +1,4 @@
-package playground.Collections;
+package playground.util;
 
 /**
  * Represents a collection of objects that have a common key.

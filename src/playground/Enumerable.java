@@ -1,7 +1,7 @@
 package playground;
 
 import org.jetbrains.annotations.NotNull;
-import playground.Collections.*;
+import playground.util.*;
 
 import java.util.*;
 
@@ -24,6 +24,8 @@ public class Enumerable {
     // Refactor Collection to Iterable. -- Check deferred execution
     // Think of adding where List.
     // T - Source/ Primary Param. S - Secondary Param. R - Result/ Tertiary Param.
+
+    // NOTE: Think of using Futures to achieve DE
 
     // ----------------------------- Where - O(n) -----------------------------
 
@@ -81,7 +83,7 @@ public class Enumerable {
         };
     }
 
-    // ----------------------------- Select - O(n) -----------------------------
+    // ----------------------------- Select -----------------------------
     public static <TSource, TResult> Iterable<TResult> project(Iterable<TSource> source,
                                                                Function<TSource, TResult> projector){
         if(source == null)
@@ -754,25 +756,83 @@ public class Enumerable {
         return resultProjector.apply(current);
     }
 
+    // ~~~~~~~~~ SET Operators! ~~~~~~~~~
+    // NOTE: Seems there are some minor draw-backs in efficiency by using Comparator rather than IEqualityComparer.
+    // https://stackoverflow.com/questions/7751170/why-we-need-the-iequalitycomparer-iequalitycomparert-interface
+    // TODO: Re-implement these after creating HashSet wrapper
+
     // ----------------------------- Distinct (DE) ----------------------------- Set-based
     // Need to create IEqualityComparer (ICompareEquality) -- Nothing like it exists in java.
 
     public static <T> Iterable<T> distinct(Iterable<T> src){
-        throw new InvalidOperationException("!Implementation");
+        return distinct(src, null);
     }
 
     public static <T> Iterable<T> distinct(Iterable<T> src, ICompareEquality<T> compareEquality){
         if(src == null)
             throw new NullArgumentException("src");
-        return distinctImp(src, compareEquality != null ? compareEquality : CompareEquality.standard);
+        return distinctImp(src, compareEquality != null ? compareEquality : new DefaultEquality<>());
     }
 
     private static <T> Iterable<T> distinctImp(Iterable<T> src, ICompareEquality<T> compareEquality) {
-        HashSet<T> passedElements = new HashSet<>(); // Will have to adjust this to take the compareEquality
-        for(T item : src)
-            if(passedElements.add(item))
-                return (Yield<T>) yield -> yield.returning(item);
-        return null; // <-- Just because Yield returning doesn't work the same as in C#
+        return (Yield<T>) yield -> {
+            HashSet<T> passedElements = new HashSet<>(/*compareEquality*/);
+            for(T item : src)
+                if(passedElements.add(item))
+                    yield.returning(item);
+        };
+    }
+
+    // ----------------------------- Union (DE) ----------------------------- Set-based
+
+    public static <T> Iterable<T> union(Iterable<T> first, Iterable<T> second){
+        return union(first,second, null);
+    }
+
+    public static <T> Iterable<T> union(Iterable<T> first, Iterable<T> second, ICompareEquality<T> compareEquality) {
+        // Could implement using Concat & Distinct, but let's not couple the methods.
+        if(first == null)
+            throw new NullArgumentException("first");
+        if(second == null)
+            throw new NullArgumentException("second");
+        return unionImp(first, second, compareEquality != null? compareEquality : new DefaultEquality<>());
+    }
+
+    private static <T> Iterable<T> unionImp(Iterable<T> first, Iterable<T> second, ICompareEquality<T> compareEquality) {
+        return (Yield<T>) y -> {
+            HashSet<T> passedElements = new HashSet<>(/*compareEquality*/);
+            for(T item : first)
+                if(passedElements.add(item))
+                    y.returning(item);
+            for(T item : second)
+                if(passedElements.add(item))
+                    y.returning(item);
+        };
+    }
+
+    // ----------------------------- Intersect (DE) ----------------------------- Set-based
+
+    public static <T> Iterable<T> intersect(Iterable<T> first, Iterable<T> second){
+        return intersect(first, second, null);
+    }
+
+    private static <T> Iterable<T> intersect(Iterable<T> first, Iterable<T> second, ICompareEquality<T> compareEquality) {
+        if(first == null)
+            throw new NullArgumentException("first");
+        if(second == null)
+            throw new NullArgumentException("second");
+        return intersectImp(first, second, compareEquality != null ? compareEquality : new DefaultEquality<>());
+    }
+
+    // NOTE: For use, best to Dev use the longer list as the first and shorter as second (to maximise performance).
+    private static <T> Iterable<T> intersectImp(Iterable<T> first, Iterable<T> second, ICompareEquality<T> compareEquality) {
+        Collection<T> conduit = toList(second);
+        return (Yield<T>) y -> {
+          HashSet<T> potentialItems = new HashSet<>(conduit /*, compareEquality*/);
+          for(T item : first)
+              if(potentialItems.remove(item))
+                  y.returning(item);
+        };
     }
 
     // ----------------------------- ToLookup -----------------------------
@@ -818,4 +878,6 @@ public class Enumerable {
         }
 
     }
+
+    private static class DefaultEquality<T> implements ICompareEquality<T>{}
 }
