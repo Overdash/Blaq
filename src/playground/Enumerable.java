@@ -23,7 +23,7 @@ public class Enumerable {
     //TODO Might create a one-argument constructor that takes an iterable and wraps it with Enumerable methods
     // Refactor Collection to Iterable. -- Check deferred execution
     // Think of adding where List.
-    // T - Source/ Primary Param. S - Secondary Param. R - Result/ Tertiary Param.
+    // T - Source/ Primary Param. T - Secondary Param. R - Result/ Tertiary Param.
 
     // NOTE: Think of using Futures to achieve DE
 
@@ -142,8 +142,9 @@ public class Enumerable {
 
     // ----------------------------- Empty. Caches (hence special class) -----------------------------
     //TODO: Empty -- Static generic fields are illegal in java (From JavaDoc: We cannot declare static fields whose types are type parameters)
+    @SuppressWarnings("unchecked")
     public static <TResult> Iterable<TResult> empty(){
-        return null; // Need to implement this... Use HashMap/ ConcurrentHM
+        return (Iterable<TResult>) EmptyIterable.EMPTY_ITERABLE;
     }
 
     // ----------------------------- Repeat -----------------------------
@@ -263,11 +264,19 @@ public class Enumerable {
         };
     }
 
-    // ----------------------------- ToList - O(n) -----------------------------
+    // ----------------------------- ToList (IE) - O(n) -----------------------------
     public static <T> List<T> toList(Iterable<T> src){
         if(src == null)
             throw new NullArgumentException("source");
-        List<T> result = new ArrayList<>();
+        List<T> result;
+
+        // Optimise for when src is a Collection object
+        if(src instanceof Collection){
+            Collection<T> items = (Collection<T>)src;
+            result = new ArrayList<>(items.size());
+        }
+        else result = new ArrayList<>();
+
         for(T item: src)
             result.add(item);
         return result;
@@ -275,8 +284,28 @@ public class Enumerable {
 
     // ----------------------------- toMap - O(n) -----------------------------
     // Can make it so it can take an Iterable of Values and a List/ Iterable for the Indexes
+    // Exhausts iterators
 
-    // ----------------------------- SelectMany - O(n^2) -> T S U -----------------------------
+    // ----------------------------- addToCollection -----------------------------
+    public static <T> void addToCollection(Collection<T> src, Iterable<? extends T> it){
+        if(src == null)
+            throw new NullArgumentException("source");
+        if(src == it)
+            throw new NullArgumentException("iterable");
+        for(T item: it)
+            src.add(item);
+    }
+
+    public static <T> void addToCollection(Collection<T> src, Iterator<? extends T> it){
+        if(src == null)
+            throw new NullArgumentException("source");
+        if(src == it)
+            throw new NullArgumentException("iterator");
+        while(it.hasNext())
+            src.add(it.next());
+    }
+
+    // ----------------------------- SelectMany - O(n^2) -> T T U -----------------------------
     // Very important method, must understand it
 
     /**
@@ -826,30 +855,135 @@ public class Enumerable {
 
     // NOTE: For use, best to Dev use the longer list as the first and shorter as second (to maximise performance).
     private static <T> Iterable<T> intersectImp(Iterable<T> first, Iterable<T> second, ICompareEquality<T> compareEquality) {
-        Collection<T> conduit = toList(second);
+//        Collection<T> conduit = toList(second);
         return (Yield<T>) y -> {
-          HashSet<T> potentialItems = new HashSet<>(conduit /*, compareEquality*/);
+          HashSet<T> potentialItems = new HashSet<>(/*, compareEquality*/);
+          addToCollection(potentialItems, second);
           for(T item : first)
               if(potentialItems.remove(item))
                   y.returning(item);
         };
     }
 
-    // ----------------------------- ToLookup -----------------------------
-    public static <S, K> ILookup<K, S> toLookup(Iterable<S> source, Function<S, K> keySelector){
-        return toLookup(source, keySelector, e -> e);
+    // ----------------------------- Except (DE) -----------------------------
+
+    public static <T> Iterable<T> except(Iterable<T> first, Iterable<T> second){
+        return except(first, second, null);
     }
 
-    public static <S, K, V>  ILookup<K, V> toLookup(Iterable<S> source, Function<S, K> keySelector,
-                                                    Function<S, V> valSelector){
-        Lookup<K, V> result = new Lookup<>();
-        for(S item : source)
-            result.add(keySelector.apply(item), valSelector.apply(item));
-
-        return result;
+    public static <T> Iterable<T> except(Iterable<T> first, Iterable<T> second, ICompareEquality<T> compareEquality){
+        if(first == null)
+            throw new NullArgumentException("first");
+        if(second == null)
+            throw new NullArgumentException("second");
+        return exceptImp(first, second, compareEquality != null ? compareEquality : new DefaultEquality<>());
     }
+
+    private static <T> Iterable<T> exceptImp(Iterable<T> first, Iterable<T> second, ICompareEquality<T> compareEquality) {
+        return (Yield<T>) yield -> {
+            HashSet<T> excludedElements = new HashSet<>(/*compareEquality*/);
+            addToCollection(excludedElements, second);
+            for(T item : first)
+                if(excludedElements.add(item))
+                    yield.returning(item);
+        };
+    }
+
+    // ----------------------------- ToLookup (IE)-----------------------------
+    // Think about thread safety
+
+    public static <T, K> ILookup<K, T> toLookup(Iterable<T> source, Function<T, K> keySelector){
+        return toLookup(source, keySelector, new DefaultEquality<>());
+    }
+
+    public static <T, K> ILookup<K, T> toLookup(Iterable<T> src, Function<T, K> keySelector,
+                                                ICompareEquality<K> compareEquality){
+        return toLookup(src, keySelector, e -> e, compareEquality);
+    }
+
+    public static <T, K, V>  ILookup<K, V> toLookup(Iterable<T> source, Function<T, K> keySelector,
+                                                    Function<T, V> valueSelector){
+        return toLookup(source, keySelector, valueSelector, new DefaultEquality<>());
+    }
+
+    public static <T, K, V>  ILookup<K, V> toLookup(Iterable<T> source, Function<T, K> keySelector,
+                                                    Function<T, V> valueSelector, ICompareEquality<K> compareEquality){
+        if(source == null)
+            throw new NullArgumentException("source");
+        if(keySelector == null)
+            throw new NullArgumentException("keySelector");
+        if(valueSelector == null)
+            throw new NullArgumentException("valueSelector");
+
+        Lookup<K, V> lookup = new Lookup<>(compareEquality != null ? compareEquality : new DefaultEquality<>());
+        for(T item : source){
+            K key = keySelector.apply(item);
+            V value = valueSelector.apply(item);
+            lookup.add(key, value);
+        }
+        return lookup;
+    }
+
+    private static <T, K> ILookup<K, T> noNullLookup(Iterable<T> src, Function<T, K> keySelector,
+                                                ICompareEquality<K> compareEquality){
+        Lookup<K, T> lookup = new Lookup<>(compareEquality != null ? compareEquality : new DefaultEquality<>());
+        for(T item : src){
+            K key = keySelector.apply(item);
+            if(key != null)
+                lookup.add(key, item);
+        }
+
+        return lookup;
+    }
+
+    // ----------------------------- Join (DE) -----------------------------
+    // Ignores Null keys
+
+    public static <TOuter, TInner, TKey, TResult> Iterable<TResult> join(Iterable<TOuter> outer, Iterable<TInner> inner,
+                                                                         Function<TOuter, TKey> outerKeySelector,
+                                                                         Function<TInner, TKey> innerKeySelector,
+                                                                         BiFunction<TOuter, TInner, TResult> resultSelector){
+        return join(outer, inner, outerKeySelector, innerKeySelector, resultSelector, null);
+    }
+
+    public static <TOuter, TInner, TKey, TResult> Iterable<TResult> join(Iterable<TOuter> outer, Iterable<TInner> inner,
+                                                                         Function<TOuter, TKey> outerKeySelector,
+                                                                         Function<TInner, TKey> innerKeySelector,
+                                                                         BiFunction<TOuter, TInner, TResult> resultSelector,
+                                                                         ICompareEquality<TKey> compareEquality){
+        if(outer == null)
+            throw new NullArgumentException("outer");
+        if(inner == null)
+            throw new NullArgumentException("inner");
+        if(outerKeySelector == null)
+            throw new NullArgumentException("outer key selector");
+        if(innerKeySelector == null)
+            throw new NullArgumentException("inner key selector");
+        if(resultSelector == null)
+            throw new NullArgumentException("result selector");
+
+        return joinImp(outer, inner, outerKeySelector, innerKeySelector, resultSelector, compareEquality);
+    }
+
+    private static <TResult, TOuter, TInner, TKey> Iterable<TResult> joinImp(Iterable<TOuter> outer, Iterable<TInner> inner,
+                                                                             Function<TOuter, TKey> outerKeySelector,
+                                                                             Function<TInner, TKey> innerKeySelector,
+                                                                             BiFunction<TOuter, TInner, TResult> resultSelector,
+                                                                             ICompareEquality<TKey> compareEquality) {
+        ILookup<TKey, TInner> lookup = noNullLookup(inner, innerKeySelector, compareEquality);
+        return (Yield<TResult>) yield -> {
+            for(TOuter outerItem : outer){
+                TKey key = outerKeySelector.apply(outerItem);
+                for(TInner innerItem : lookup.getItem(key))
+                    yield.returning(resultSelector.apply(outerItem, innerItem));
+            }
+        };
+    }
+
 
     // ----------------------------- GroupJoin -----------------------------
+    // Ignores Null Keys
+
     public static <TOuter, TInner, TKey, TResult> Iterable<TResult> GroupJoin(Iterable<TOuter> outer, Iterable<TInner> inner,
                                                                               Function<TOuter, TKey> outerKeySelector,
                                                                               Function<TInner, TKey> innerKeySelector,
@@ -861,10 +995,12 @@ public class Enumerable {
 
     private static class EmptyIterable<T> implements Iterable<T>, Iterator<T>{
 
+        static final EmptyIterable<Object> EMPTY_ITERABLE = new EmptyIterable<>();
+
         @NotNull
         @Override
         public Iterator<T> iterator() {
-            return null;
+            return Collections.emptyIterator();
         }
 
         @Override
@@ -874,7 +1010,7 @@ public class Enumerable {
 
         @Override
         public T next() {
-            return null;
+            throw new NoSuchElementException();
         }
 
     }
