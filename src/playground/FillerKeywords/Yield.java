@@ -35,7 +35,7 @@ public interface Yield<T> extends Iterable<T> {
                 execute(yieldDef);
             } catch (BreakException e){
                 //Might add logger here to experiment.
-                System.out.println("broke");
+//                System.out.println("broke");
             }
             yieldDef.signalComplete();
         });
@@ -64,7 +64,7 @@ public interface Yield<T> extends Iterable<T> {
 
         @Override
         public void close() {
-            System.out.println("Closing " + this); // -> Remove this
+//            System.out.println("Closing " + this); // -> Remove this
             toTunOnClose.forEach(Runnable::run);
         }
 

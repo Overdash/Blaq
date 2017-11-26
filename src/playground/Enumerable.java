@@ -20,7 +20,8 @@ import java.util.function.*;
 public class Enumerable {
     private Enumerable(){} //prevent creating instances of this class
 
-    //TODO Might create a one-argument constructor that takes an iterable and wraps it with Enumerable methods
+    // TODO Might create a one-argument constructor that takes an iterable and wraps it with Enumerable methods
+    // TODO NO NEED FOR CloseableIterator -- Java Iterators are just abstractions, only need to close is closing resource.
     // Refactor Collection to Iterable. -- Check deferred execution
     // Think of adding where List.
     // T - Source/ Primary Param. T - Secondary Param. R - Result/ Tertiary Param.
@@ -122,7 +123,7 @@ public class Enumerable {
     }
 
     // ----------------------------- Range -----------------------------
-    public static <T> Iterable<Integer> range(Iterable<T> src, int start, int count){
+    public static <T> Iterable<Integer> range(int start, int count){
         if(count < 0)
             throw new ArgumentOutOfRangeException("count");
 
@@ -130,10 +131,10 @@ public class Enumerable {
         if((long)start + (long)count - 1L > Integer.MAX_VALUE)
             throw new ArgumentOutOfRangeException("count");
 
-        return rangeImp(src, start, count);
+        return rangeImp(start, count);
     }
 
-    private static <T> Yield<Integer> rangeImp(Iterable<T> src, int start, int count){
+    private static <T> Yield<Integer> rangeImp(int start, int count){
         return yield -> {
           for (int i = 0; i < count; i++)
               yield.returning(start+i);
@@ -143,19 +144,19 @@ public class Enumerable {
     // ----------------------------- Empty. Caches (hence special class) -----------------------------
     //TODO: Empty -- Static generic fields are illegal in java (From JavaDoc: We cannot declare static fields whose types are type parameters)
     @SuppressWarnings("unchecked")
-    public static <TResult> Iterable<TResult> empty(){
-        return (Iterable<TResult>) EmptyIterable.EMPTY_ITERABLE;
+    public static <T> Iterable<T> empty(){
+        return (Iterable<T>) EmptyIterable.EMPTY_ITERABLE;
     }
 
     // ----------------------------- Repeat -----------------------------
-    public static <E> Iterable<E> repeat(E e, int count){
+    public static <T> Iterable<T> repeat(T e, int count){
         if(count < 0)
             throw new ArgumentOutOfRangeException("count");
         return repeatImp(e,count);
     }
 
-    private static <E> Iterable<E> repeatImp(E e, int count) {
-        return (Yield<E>) yield -> {
+    private static <T> Iterable<T> repeatImp(T e, int count) {
+        return (Yield<T>) yield -> {
           for(int i=0; i < count; i++)
               yield.returning(e);
         };
@@ -993,7 +994,7 @@ public class Enumerable {
 
     /* --------------------Nested Classes---------------------- */
 
-    private static class EmptyIterable<T> implements Iterable<T>, Iterator<T>{
+    private static class EmptyIterable<T> implements Iterable<T>{
 
         static final EmptyIterable<Object> EMPTY_ITERABLE = new EmptyIterable<>();
 
@@ -1004,15 +1005,7 @@ public class Enumerable {
         }
 
         @Override
-        public boolean hasNext() {
-            return false;
-        }
-
-        @Override
-        public T next() {
-            throw new NoSuchElementException();
-        }
-
+        public void forEach(Consumer<? super T> action){ Objects.requireNonNull(action); }
     }
 
     private static class DefaultEquality<T> implements ICompareEquality<T>{}
