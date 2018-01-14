@@ -5,7 +5,7 @@ import playground.Enumerable;
 
 import java.util.ArrayList;
 
-public class TextExtensions {
+public class TestExtensions {
 
     @SafeVarargs
     public static <T> void assertSequenceEqual(Iterable<T> actual, T... expected){

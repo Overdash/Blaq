@@ -14,7 +14,7 @@ import java.util.*;
  * associated with a key, you can also iterate over
  * the whole lookup in terms of groupings.
  *
- * Lookups are Mutable internally - immutable in public API.
+ * Lookups are Mutable internally - immutable in public API. -- Cannot add or remove items from public API (change modifiers)
  * Have to make sure we never mutate it after it becomes visible to a caller.
  * @param <K> Keys.
  * @param <V> Sequence of values.

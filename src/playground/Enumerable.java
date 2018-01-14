@@ -18,13 +18,16 @@ import java.util.function.*;
  * @since BLAQ v0
  */
 public class Enumerable {
-    private Enumerable(){} //prevent creating instances of this class
+    private Enumerable(){throw new AssertionError("BLAQ doesn't need instances!");} //prevent creating instances of this class
 
-    // TODO Might create a one-argument constructor that takes an iterable and wraps it with Enumerable methods
+    // TODO Might create a class w/one-argument constructor that takes an iterable and wraps it with Enumerable methods
     // TODO NO NEED FOR CloseableIterator -- Java Iterators are just abstractions, only need to close is closing resource.
     // Refactor Collection to Iterable. -- Check deferred execution
     // Think of adding where List.
     // T - Source/ Primary Param. T - Secondary Param. R - Result/ Tertiary Param.
+
+    // DE - If source contents is changed before iterating through the result, the result should reflect the changes.
+    // ... should start iterating through input sequence when src.iterator().next() is called.
 
     // NOTE: Think of using Futures to achieve DE
 
@@ -171,13 +174,23 @@ public class Enumerable {
      * @param <T> The type of the elements of source.
      * @return The number of elements in the input sequence.
      * @throws NullArgumentException Thrown when {@code src} is null.
+     * @throws ArithmeticException when count is over {@code Integer.MAX_VALUE}
      */
     public static <T> int count(Iterable<T> src){
         if(src == null)
             throw new NullArgumentException("src");
-        Collection<T> c = (Collection<T>) src;
+        if(src instanceof Collection){
+            Collection<T> c = (Collection<T>) src;
+            return c.size();
+        }
 
-        return c.size();
+        int count = 0;
+        for (T i : src) {
+            if (count < Integer.MAX_VALUE) count++;
+            else throw new ArithmeticException("Overflow.");
+        }
+
+        return count;
     }
 
     /**
@@ -215,9 +228,17 @@ public class Enumerable {
     public static <T> long longCount(Iterable<T> src){
         if(src == null)
             throw new NullArgumentException("src");
-        Collection<T> c = (Collection<T>) src;
 
-        return c.size();
+        if(src instanceof Collection){
+            Collection<T> c = (Collection<T>) src;
+            return c.size();
+        }
+
+        long count = 0;
+        for(T i : src)
+            if(count < Long.MAX_VALUE) count++;
+
+        return count;
     }
 
     /**
@@ -282,10 +303,6 @@ public class Enumerable {
             result.add(item);
         return result;
     }
-
-    // ----------------------------- toMap - O(n) -----------------------------
-    // Can make it so it can take an Iterable of Values and a List/ Iterable for the Indexes
-    // Exhausts iterators
 
     // ----------------------------- addToCollection -----------------------------
     public static <T> void addToCollection(Collection<T> src, Iterable<? extends T> it){
@@ -981,16 +998,651 @@ public class Enumerable {
         };
     }
 
+    // ----------------------------- GroupBy (DE... Semi-DE) -----------------------------
+    // Logically Function<K, Iterable<V>, S> == Function<IGrouping<K, V>, S>
 
-    // ----------------------------- GroupJoin -----------------------------
+    public static <T, K> Iterable<IGrouping<K, T>> groupBy(Iterable<T> src,
+                                                           Function<T, K> keyFunction){
+        return groupBy(src, keyFunction, x -> x, new DefaultEquality<>());
+    }
+
+    public static <T, K> Iterable<IGrouping<K, T>> groupBy(Iterable<T> src,
+                                                           Function<T, K> keyFunction,
+                                                           ICompareEquality<K> compareEquality){
+        return groupBy(src, keyFunction, x -> x, compareEquality);
+    }
+
+    public static <T, K, V> Iterable<IGrouping<K, V>> groupBy(Iterable<T> src,
+                                                              Function<T, K> keyFunction,
+                                                              Function<T, V> elementFunction){
+        return groupBy(src, keyFunction, elementFunction, new DefaultEquality<>());
+    }
+
+    public static <T, K, V> Iterable<IGrouping<K, V>> groupBy(Iterable<T> src,
+                                                              Function<T, K> keyFunction,
+                                                              Function<T, V> elementFunction,
+                                                              ICompareEquality<K> compareEquality){
+        if(src == null)
+            throw new NullArgumentException("source");
+        if(keyFunction == null)
+            throw new NullArgumentException("keyFunction");
+        if(elementFunction == null)
+            throw new NullArgumentException("elementFunction");
+
+        return groupByImp(src, keyFunction, elementFunction, compareEquality);
+    }
+
+    private static <T, K, V> Iterable<IGrouping<K, V>> groupByImp(Iterable<T> src,
+                                                                  Function<T, K> keyFunction,
+                                                                  Function<T, V> elementFunction,
+                                                                  ICompareEquality<K> compareEquality){
+        ILookup<K, V> lookup = toLookup(src, keyFunction, elementFunction, compareEquality);
+        return (Yield<IGrouping<K, V>>) yield -> {
+            for(IGrouping<K, V> result : lookup)
+                yield.returning(result);
+        };
+    }
+
+    public static <T, K, S> Iterable<S> groupBy(Iterable<T> src,
+                                                Function<T, K> keyFunction,
+                                                BiFunction<K, Iterable<T>, S> resultFunction){
+        return groupBy(src, keyFunction, x -> x, resultFunction, new DefaultEquality<>());
+    }
+
+    public static <T, K, S> Iterable<S> groupBy(Iterable<T> src,
+                                                Function<T, K> keyFunction,
+                                                BiFunction<K, Iterable<T>, S> resultFunction,
+                                                ICompareEquality<K> compareEquality){
+        return groupBy(src, keyFunction, x -> x, resultFunction, compareEquality);
+    }
+
+    public static <T, K, V, S> Iterable<S> groupBy(Iterable<T> src,
+                                                   Function<T, K> keyFunction,
+                                                   Function<T, V> elementFunction,
+                                                   BiFunction<K, Iterable<V>, S> resultFunction){
+        return groupBy(src, keyFunction, elementFunction, resultFunction, new DefaultEquality<>());
+    }
+
+    public static <T, K, V, S> Iterable<S> groupBy(Iterable<T> src,
+                                                   Function<T, K> keyFunction,
+                                                   Function<T, V> elementFunction,
+                                                   BiFunction<K, Iterable<V>, S> resultFunction,
+                                                   ICompareEquality<K> compareEquality){
+        if(resultFunction == null)
+            throw new NullArgumentException("resultFunction");
+
+        return project(
+                groupBy(src, keyFunction, elementFunction, compareEquality),
+                group -> resultFunction.apply(group.getKey(), group));
+    }
+
+    // ----------------------------- GroupJoin (DE) -----------------------------
     // Ignores Null Keys
+    // When iterating through result, 'inner' sequence is immediately read all the way through
 
-    public static <TOuter, TInner, TKey, TResult> Iterable<TResult> GroupJoin(Iterable<TOuter> outer, Iterable<TInner> inner,
+    public static <TOuter, TInner, TKey, TResult> Iterable<TResult> groupJoin(Iterable<TOuter> outer, Iterable<TInner> inner,
                                                                               Function<TOuter, TKey> outerKeySelector,
                                                                               Function<TInner, TKey> innerKeySelector,
                                                                               BiFunction<TOuter, Iterable<TInner>, TResult> resultSelector){
-        throw new InvalidOperationException("!Implementation");
+        return groupJoin(outer, inner, outerKeySelector, innerKeySelector, resultSelector, new DefaultEquality<>());
     }
+
+    public static <TOuter, TInner, TKey, TResult> Iterable<TResult> groupJoin(Iterable<TOuter> outer, Iterable<TInner> inner,
+                                                                              Function<TOuter, TKey> outerKeySelector,
+                                                                              Function<TInner, TKey> innerKeySelector,
+                                                                              BiFunction<TOuter, Iterable<TInner>, TResult> resultSelector,
+                                                                              ICompareEquality<TKey> compareEquality){
+        if(outer == null)
+            throw new NullArgumentException("outer");
+        if(inner == null)
+            throw new NullArgumentException("inner");
+        if(outerKeySelector == null)
+            throw new NullArgumentException("outerKeySelector");
+        if(innerKeySelector == null)
+            throw new NullArgumentException("innerKeySelector");
+        if(resultSelector == null)
+            throw new NullArgumentException("resultSelector");
+
+        ILookup<TKey, TInner> lookup = toLookup(inner, innerKeySelector, compareEquality);
+        return (Yield<TResult>) yield -> {
+            for(TOuter outerVal : outer){
+                TKey key = outerKeySelector.apply(outerVal);
+                yield.returning(resultSelector.apply(outerVal, lookup.getItem(key)));
+            }
+        };
+    }
+
+    // ----------------------------- Take (DE) -----------------------------
+    // Might need CloseableIterator because Yield is a resource (due to threads)
+
+    public static <T> Iterable<T> take(Iterable<T> src, int count){
+        if (src == null)
+            throw new NullArgumentException("source");
+        return takeImp(src, count);
+    }
+
+    private static <T> Iterable<T> takeImp(Iterable<T> src, int count) {
+        return (Yield<T>) yield -> {
+            Iterator<T> it = src.iterator();
+            for(int i = 0; i < count && it.hasNext(); i++)
+                yield.returning(it.next());
+        };
+    }
+
+    // ----------------------------- TakeWhile (DE) -----------------------------
+
+    public static <T> Iterable<T> takeWhile(Iterable<T> src, Function<T, Boolean> predicate){
+        if (src == null)
+            throw new NullArgumentException("source");
+        if (predicate == null)
+            throw new NullArgumentException("predicate");
+        return takeWhileImp(src, predicate);
+    }
+
+    private static <T> Iterable<T> takeWhileImp(Iterable<T> src, Function<T, Boolean> predicate) {
+        return (Yield<T>) yield ->{
+          for (T item : src){
+              if(!predicate.apply(item))
+                  yield.breaking();
+
+              yield.returning(item);
+          }
+        };
+    }
+
+    public static <T> Iterable<T> takeWhile(Iterable<T> src, BiFunction<T, Integer, Boolean> predicate){
+        if(src == null)
+            throw new NullArgumentException("source");
+        if (predicate == null)
+            throw new NullArgumentException("predicate");
+        return takeWhileImp(src, predicate);
+    }
+
+    private static <T> Iterable<T> takeWhileImp(Iterable<T> src, BiFunction<T, Integer, Boolean> predicate) {
+        return (Yield<T>) yield -> {
+          int i = 0;
+          for(T item : src){
+              if(!predicate.apply(item, i))
+                  yield.breaking();
+
+              i++;
+              yield.returning(item);
+          }
+        };
+    }
+
+    // ----------------------------- Skip (DE) -----------------------------
+
+    public static <T> Iterable<T> skip(Iterable<T> src, int count){
+        if (src == null)
+            throw new NullArgumentException("source");
+        if(count <= 0)
+            return src;
+        return skipImp(src, count);
+    }
+
+    private static <T> Iterable<T> skipImp(Iterable<T> src, int count) {
+        return (Yield<T>) yield -> {
+            Iterator<T> it = src.iterator();
+            for(int i = 0; i < count; i++)
+                if(!it.hasNext())
+                    yield.breaking();
+
+            while(it.hasNext())
+                yield.returning(it.next());
+        };
+    }
+
+    // ----------------------------- SkipWhile (DE) -----------------------------
+
+    public static <T> Iterable<T> skipWhile(Iterable<T> src, Function<T, Boolean> predicate){
+        if(src == null)
+            throw new NullArgumentException("source");
+        if (predicate == null)
+            throw new NullArgumentException("predicate");
+
+        return skipWhileImp(src, predicate);
+    }
+
+    private static <T> Iterable<T> skipWhileImp(Iterable<T> src, Function<T, Boolean> predicate) {
+        return (Yield<T>) yield -> {
+            Iterator<T> it = src.iterator();
+            while(it.hasNext()){
+              T item = it.next();
+              if(!predicate.apply(item)){
+                  // Stop skipping & yield the current item
+                  yield.returning(item);
+                  break;
+              }
+            }
+
+            while(it.hasNext())
+              yield.returning(it.next());
+        };
+    }
+
+    public static <T> Iterable<T> skipWhile(Iterable<T> src, BiFunction<T, Integer, Boolean> predicate){
+        if(src == null)
+            throw new NullArgumentException("source");
+        if (predicate == null)
+            throw new NullArgumentException("predicate");
+
+        return skipWhileImp(src, predicate);
+    }
+
+    private static <T> Iterable<T> skipWhileImp(Iterable<T> src, BiFunction<T, Integer, Boolean> predicate) {
+        return (Yield<T>) yield -> {
+            Iterator<T> it = src.iterator();
+            int i = 0;
+            while(it.hasNext()){
+                T item = it.next();
+                if(!predicate.apply(item, i)){
+                    // Stop skipping & yield current item.
+                    yield.returning(item);
+                    break;
+                }
+                i++;
+            }
+
+            while(it.hasNext())
+                yield.returning(it.next());
+        };
+    }
+
+    // ----------------------------- ToArray (IE) -----------------------------
+    // Heavily check this for type issues.
+
+    @SuppressWarnings("unchecked")
+    public static <T> T[] toArray(Iterable<T> src){
+        if (src == null)
+            throw new NullArgumentException("src");
+        Collection<T> collection;
+        if(src instanceof Collection){
+            collection = (Collection<T>) src;
+            return (T[])collection.toArray();
+        }
+        collection = new ArrayList<>();
+        addToCollection(collection, src);
+        return (T[])collection.toArray();
+    }
+
+    // ----------------------------- ToDictionary (IE) -----------------------------
+    /*
+    * The main difference between ToDictionary and ToLookup is that a dictionary can
+    * only store a single value per key, rather than a whole sequence of values. Of course,
+    * another difference is that Dictionary<TKey, TValue> (Map<K, V>) is mutable concrete class,
+    * whereas ILookup<TKey, TElement> is an interface usually implemented in an
+    * immutable fashion.
+    *
+    * This Java variant allows ONE Null Key.
+    * */
+
+    public static <T, K> Map<K, T> toMap(Iterable<T> src, Function<T, K> keySelector){
+        return toMap(src, keySelector, x -> x, new DefaultEquality<>());
+    }
+
+    public static <T, K, V> Map<K, V> toMap(Iterable<T> src, Function<T, K> keySelector, Function<T, V> valueSelector){
+        return toMap(src, keySelector, valueSelector, new DefaultEquality<>());
+    }
+
+    public static <T, K> Map<K, T> toMap(Iterable<T> src, Function<T, K> keySelector, ICompareEquality<K> compareEquality){
+        return toMap(src, keySelector, x -> x, compareEquality);
+    }
+
+    public static <T, K, V> Map<K, V> toMap(Iterable<T> src, Function<T, K> keySelector,
+                                            Function<T, V> valueSelector, ICompareEquality<K> compareEquality){
+        if(src == null)
+            throw new NullArgumentException("source");
+        if(keySelector == null)
+            throw new NullArgumentException("key selector");
+        if(valueSelector == null)
+            throw new NullArgumentException("value selector");
+        /*compareEquality != null ? compareEquality : new DefaultEquality*/
+
+        Map<K, V> ret = src instanceof Collection ? new HashMap<>(((Collection) src).size()) : new HashMap<>();
+        for(T item : src)
+            ret.put(keySelector.apply(item), valueSelector.apply(item));
+
+        return ret;
+    }
+
+    // ----------------------------- OrderBy (DE) -----------------------------
+
+    @SuppressWarnings("unchecked")
+    public static <T, K> IOrderedIterable<T> orderBy(Iterable<T> src, Function<T, K> keySelector){
+        return orderBy(src, keySelector, (Comparator<K>) Comparator.naturalOrder());
+    }
+
+    @SuppressWarnings("unchecked")
+    public static <T, K> IOrderedIterable<T> orderBy(Iterable<T> src, Function<T, K> keySelector, Comparator<K> comparator){
+        if (src == null)
+            throw new NullArgumentException("source");
+        if(keySelector == null)
+            throw new NullArgumentException("key selector");
+
+        return new OrderedIterable<>(src, keySelector, comparator != null ? comparator : (Comparator<K>) Comparator.naturalOrder());
+    }
+
+    // ----------------------------- OrderByDescending (DE) -----------------------------
+
+    @SuppressWarnings("unchecked")
+    public static <T, K> IOrderedIterable<T> orderByDescending(Iterable<T> src, Function<T, K> keySelector){
+        return orderByDescending(src, keySelector, (Comparator<K>) Comparator.naturalOrder());
+    }
+
+    @SuppressWarnings("unchecked")
+    public static <T, K> IOrderedIterable<T> orderByDescending(Iterable<T> src, Function<T, K> keySelector,
+                                                               Comparator<K> comparator){
+        if (src == null)
+            throw new NullArgumentException("source");
+        if(keySelector == null)
+            throw new NullArgumentException("key selector");
+        return new OrderedIterable<>(src, keySelector, comparator != null ? comparator.reversed()
+                : (Comparator<K>) Comparator.reverseOrder());
+    }
+
+    // ----------------------------- ThenBy (DE) -----------------------------
+
+    @SuppressWarnings("unchecked")
+    public static <T, K> IOrderedIterable<T> thenBy(IOrderedIterable<T> src, Function<T, K> keySelector){
+        return thenBy(src, keySelector, (Comparator<K>) Comparator.naturalOrder());
+    }
+
+    public static <T, K> IOrderedIterable<T> thenBy(IOrderedIterable<T> src, Function<T, K> keySelector,
+                                                    Comparator<K> comparator){
+        if (src == null)
+            throw new NullArgumentException("source");
+        if(keySelector == null)
+            throw new NullArgumentException("key selector");
+        return src.createOrderedIterable(keySelector, comparator, false);
+    }
+
+    // ----------------------------- ThenByDescending (DE) -----------------------------
+
+    @SuppressWarnings("unchecked")
+    public static <T, K> IOrderedIterable<T> thenByDescending(IOrderedIterable<T> src, Function<T, K> keySelector){
+        return thenByDescending(src, keySelector, (Comparator<K>) Comparator.naturalOrder());
+    }
+
+    public static <T, K> IOrderedIterable<T> thenByDescending(IOrderedIterable<T> src, Function<T, K> keySelector,
+                                                             Comparator<K> comparator){
+        if (src == null)
+            throw new NullArgumentException("source");
+        if(keySelector == null)
+            throw new NullArgumentException("key selector");
+        return src.createOrderedIterable(keySelector, comparator, true);
+    }
+
+    // ----------------------------- Reverse (IE) -----------------------------
+
+    public static <T> Iterable<T> reverse(Iterable<T> src){
+        if(src == null)
+            throw new NullArgumentException("source");
+        return reverseImp(src);
+    }
+
+    private static <T> Iterable<T> reverseImp(Iterable<T> src) {
+        Stack<T> stack = new Stack<>();
+        for(T item : src)
+            stack.push(item);
+
+        return (Yield<T>) yield -> {
+            for(T item : stack)
+                yield.returning(item);
+        };
+    }
+
+    // ----------------------------- Sum (IE) -----------------------------
+    public static int sum(Iterable<Integer> src){
+        return sum(src, x -> x);
+    }
+
+    // TODO: numerical type which can be nullable or non-nullable
+    //public static Supplier<Integer> sum(Iterable<Supplier<Integer>> src)
+
+    public static <T> int sum(Iterable<T> src, Function<T, Integer> selector){
+        if(src == null)
+            throw new NullArgumentException("source");
+        if(selector == null)
+            throw new NullArgumentException("selector");
+
+        int sum = 0;
+        for(T item : src){
+            if(sum < Integer.MAX_VALUE)
+                sum += selector.apply(item);
+            else
+                throw new ArithmeticException("Overflow exception.");
+        }
+        return sum;
+    }
+
+    public static long longSum(Iterable<Long> src){
+        return longSum(src, x -> x);
+    }
+
+    public static <T> long longSum(Iterable<T> src, Function<T, Long> selector){
+        if(src == null)
+            throw new NullArgumentException("source");
+        if(selector == null)
+            throw new NullArgumentException("selector");
+
+        long sum = 0;
+        for(T item : src){
+            if(sum < Long.MAX_VALUE)
+                sum += selector.apply(item);
+            else
+                throw new ArithmeticException("Overflow exception.");
+        }
+        return sum;
+    }
+
+    public static double doubleSum(Iterable<Double> src){
+        return doubleSum(src, x -> x);
+    }
+
+    public static <T> double doubleSum(Iterable<T> src, Function<T, Double> selector){
+        if(src == null)
+            throw new NullArgumentException("source");
+        if(selector == null)
+            throw new NullArgumentException("selector");
+
+        double sum = 0;
+        for(T item : src)
+            sum += selector.apply(item);
+        return sum;
+    }
+
+    // TODO: Consider Kahan Summation algorithm. Aggregate Ops nightmare
+    public static float floatSum(Iterable<Float> src){
+        return floatSum(src, x -> x);
+    }
+
+    public static <T> float floatSum(Iterable<T> src, Function<T, Float> selector){
+        if(src == null)
+            throw new NullArgumentException("source");
+        if(selector == null)
+            throw new NullArgumentException("selector");
+
+        float sum = 0;
+        for(T item : src)
+            sum += selector.apply(item);
+        return sum;
+    }
+
+    // ----------------------------- Min (IE) -----------------------------
+    // Normally there are 4 primitive overloads of Max/Min, however, due to Type Erasure
+    // The Generic overload erases to the same
+//    public static int min(Iterable<Integer> src){
+//        return min(src, x -> x);
+//    }
+//
+//    public static <T> int min(Iterable<T> src, Function<T, Integer> selector){
+//
+//    }
+
+    // Consider handling null values
+    public static <T> T min(Iterable<T> src){
+        if(src == null)
+            throw new NullArgumentException("Source");
+        return minImp(src);
+    }
+
+    public static <T, S> S min(Iterable<T> src, Function<T, S> selector){
+        return min(project(src, selector));
+    }
+
+    @SuppressWarnings("unchecked")
+    private static <T> T minImp(Iterable<T> src){
+        Iterator<T> it = src.iterator();
+        if(!it.hasNext())
+            throw new InvalidOperationException("Sequence was empty.");
+        T min = it.next();
+        while(it.hasNext()){
+            T item = it.next();
+            if(((Comparator<T>)Comparator.naturalOrder()).compare(min, item) > 0)
+                min = item;
+        }
+        return min;
+    }
+
+    // ----------------------------- MinBy (IE) MoreLINQ -----------------------------
+
+    public static <T, K> T minBy(Iterable<T> src, Function<T, K> selector){
+        return minBy(src, selector, null);
+    }
+
+    @SuppressWarnings("unchecked")
+    public static <T, K> T minBy(Iterable<T> src, Function<T, K> selector, Comparator<K> comparator){
+        if(src == null)
+            throw new NullArgumentException("Source");
+        if(selector == null)
+            throw new NullArgumentException("Selector");
+        comparator = comparator != null ? comparator : (Comparator<K>)Comparator.naturalOrder();
+
+        Iterator<T> it = src.iterator();
+        if(!it.hasNext())
+            throw new InvalidOperationException("Sequence contains no elements!");
+
+        T min = it.next();
+        K minKey = selector.apply(min);
+        while(it.hasNext()){
+            T candidate = it.next();
+            K candidateKey = selector.apply(candidate);
+            if(comparator.compare(candidateKey, minKey) < 0){
+                min = candidate;
+                minKey = candidateKey;
+            }
+        }
+        if(it instanceof ClosableIterator) ((ClosableIterator) it).close();
+        return min;
+    }
+
+    // ----------------------------- Max (IE) -----------------------------
+
+    public static <T> T max(Iterable<T> src){
+        if(src == null)
+            throw new NullArgumentException("Source");
+        return maxImp(src);
+    }
+
+    public static <T, S> S max(Iterable<T> src, Function<T, S> selector){
+        return max(project(src, selector));
+    }
+
+    @SuppressWarnings("unchecked")
+    private static <T> T maxImp(Iterable<T> src){
+        Iterator<T> it = src.iterator();
+        if(!it.hasNext())
+            throw new InvalidOperationException("Sequence was empty.");
+        T max = it.next();
+        while(it.hasNext()){
+            T item = it.next();
+            if(((Comparator<T>)Comparator.naturalOrder()).compare(max, item) < 0)
+                max = item;
+        }
+        return max;
+    }
+
+    // ----------------------------- MaxBy (IE) MoreLINQ -----------------------------
+
+    public static <T, K> T maxBy(Iterable<T> src, Function<T, K> selector){
+        return maxBy(src, selector, null);
+    }
+
+    @SuppressWarnings("unchecked")
+    public static <T, K> T maxBy(Iterable<T> src, Function<T, K> selector, Comparator<K> comparator){
+        if(src == null)
+            throw new NullArgumentException("Source");
+        if(selector == null)
+            throw new NullArgumentException("Selector");
+        comparator = comparator != null ? comparator : (Comparator<K>)Comparator.naturalOrder();
+
+        Iterator<T> it = src.iterator();
+        if(!it.hasNext())
+            throw new InvalidOperationException("Sequence contains no elements!");
+
+        T max = it.next();
+        K maxKey = selector.apply(max);
+        while(it.hasNext()){
+            T candidate = it.next();
+            K candidateKey = selector.apply(candidate);
+            if(comparator.compare(candidateKey, maxKey) > 0){
+                max = candidate;
+                maxKey = candidateKey;
+            }
+        }
+        if(it instanceof ClosableIterator) ((ClosableIterator) it).close();
+        return max;
+    }
+
+    // ----------------------------- Average (IE) -----------------------------
+
+    public static double average(Iterable<Number> src){
+        if(src == null)
+            throw new NullArgumentException("Source");
+
+        Iterator<Number> it = src.iterator();
+
+        if(!it.hasNext())
+            throw new InvalidOperationException("Sequence contains no elements!");
+
+        Number n = it.next();
+        long count = 0;
+        double total = 0;
+        if(n instanceof Long || n instanceof Integer){
+            for(Number item : src){
+                total += item.longValue();
+                count++;
+            }
+        } else if(n instanceof Double || n instanceof Float){
+            for(Number item : src){
+                total += item.doubleValue();
+                count++;
+            }
+        } else {
+            for(Number item : src){
+                total += item.shortValue();
+                count++;
+            }
+        }
+
+        return total/ count;
+    }
+
+    // TODO: Better optimisation for primitives!
+    public static <T> double average(Iterable<T> src, Function<T, Number> selector){
+        if(selector == null)
+            throw new NullArgumentException("Selector");
+
+        return average(project(src, selector));
+    }
+
+    // work on Float version
+
+    // ----------------------------- ElementAt (IE) -----------------------------
+
+
+    // Consider using reflection to handle Argument validation messages. C# uses nameof()
 
     /* --------------------Nested Classes---------------------- */
 
