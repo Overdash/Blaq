@@ -1,7 +1,7 @@
 package playground.FillerKeywords;
 
 import org.jetbrains.annotations.NotNull;
-import playground.util.ClosableIterator;
+import playground.util.CloseableIterator;
 
 import java.util.List;
 import java.util.Optional;
@@ -27,7 +27,7 @@ public interface Yield<T> extends Iterable<T> {
     void execute(YieldDef<T> builder);
 
     @NotNull
-    default ClosableIterator<T> iterator(){ // Originally returned ClosableIterator<T> -  Can change to Iterable<T>
+    default CloseableIterator<T> iterator(){ // Originally returned CloseableIterator<T> -  Can change to Iterable<T>
         YieldDef<T> yieldDef = new YieldDef<>();
         Thread collector = new Thread(() -> {
             yieldDef.waitUntilFirstValueRequested();
@@ -49,7 +49,7 @@ public interface Yield<T> extends Iterable<T> {
      * Nested class defining the properties and behaviors of the yield. Each yield must be disposed of (closed) to free threads.
      * @param <T>
      */
-    class YieldDef<T> implements Iterable<T>, ClosableIterator<T> {
+    class YieldDef<T> implements Iterable<T>, CloseableIterator<T> {
 
         private final SynchronousQueue<Message<T>> dataChannel = new SynchronousQueue<>();
         private final SynchronousQueue<FlowControl> flowChannel = new SynchronousQueue<>();
@@ -58,7 +58,7 @@ public interface Yield<T> extends Iterable<T> {
 
         @NotNull
         @Override
-        public ClosableIterator<T> iterator() {
+        public CloseableIterator<T> iterator() {
             return this;
         }
 

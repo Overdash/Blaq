@@ -470,7 +470,7 @@ public class Enumerable {
     public static <T> boolean any(Iterable<T> src){
         if(src == null)
             throw new NullArgumentException("src");
-        try(ClosableIterator<T> iterator = (ClosableIterator<T>) src.iterator()){
+        try(CloseableIterator<T> iterator = (CloseableIterator<T>) src.iterator()){
             return iterator.hasNext();
         }
     }
@@ -527,11 +527,10 @@ public class Enumerable {
     public static <T> T first(Iterable<T> src){
         if(src == null)
             throw new NullArgumentException("src");
-        try(ClosableIterator<T> it = (ClosableIterator<T>)src.iterator()){
-            if(it.hasNext())
-                return it.next();
-            throw new InvalidOperationException("Empty sequence");
-        }
+        Iterator<T> it = src.iterator();
+        if(it.hasNext())
+            firstCIOpt(it);
+        throw new InvalidOperationException("Empty sequence");
     }
 
     /**
@@ -567,9 +566,21 @@ public class Enumerable {
     public static <T> T firstOrNull(Iterable<T> src){
         if(src == null)
             throw new NullArgumentException("src");
-        try(ClosableIterator<T> it = (ClosableIterator<T>)src.iterator()){
-            return it.hasNext() ? it.next() : null;
+        Iterator<T> it = src.iterator();
+        if(it.hasNext())
+            return firstCIOpt(it);
+        return null;
+        //            return it.hasNext() ? it.next() : null;
+    }
+
+    private static <T> T firstCIOpt(Iterator<T> it){
+        // Optimising first/OrNull for when the iterator is a CloseableIterator.
+        if(it instanceof CloseableIterator){
+            T t = it.next();
+            ((CloseableIterator) it).close();
+            return t;
         }
+        return it.next();
     }
 
     /**
@@ -596,7 +607,7 @@ public class Enumerable {
     public static <T> T single(Iterable<T> src){
         if(src == null)
             throw new NullArgumentException("src");
-        try(ClosableIterator<T> it = (ClosableIterator<T>) src.iterator()){
+        try(CloseableIterator<T> it = (CloseableIterator<T>) src.iterator()){
             if(!it.hasNext())
                 throw new InvalidOperationException("Sequence is empty");
             T e = it.next();
@@ -630,14 +641,22 @@ public class Enumerable {
     public static <T> T singleOrNull(Iterable<T> src){
         if(src == null)
             throw new NullArgumentException("src");
-        try(ClosableIterator<T> it = (ClosableIterator<T>)src.iterator()){
-            if(!it.hasNext())
-                return null;
-            T e = it.next();
-            if(it.hasNext())
-                throw new InvalidOperationException("Sequence contained multiple elements");
-            return e;
+
+        Iterator<T> it = src.iterator();
+        if(!it.hasNext()) {
+            if(it instanceof CloseableIterator)
+                ((CloseableIterator) it).close();
+            return null;
         }
+        T e = it.next();
+        if(it.hasNext()) {
+            if(it instanceof CloseableIterator)
+                ((CloseableIterator) it).close();
+            throw new InvalidOperationException("Sequence contained multiple elements");
+        }
+        if(it instanceof CloseableIterator)
+            ((CloseableIterator) it).close();
+        return e;
     }
 
     public static <T> T singleOrNull(Iterable<T> src, Predicate<T> predicate){
@@ -678,7 +697,7 @@ public class Enumerable {
                 throw new InvalidOperationException("Sequence is empty");
             return c.get(c.size() - 1);
         } catch (ClassCastException ignored){}
-        try(ClosableIterator<T> it = (ClosableIterator<T>)src.iterator()){
+        try(CloseableIterator<T> it = (CloseableIterator<T>)src.iterator()){
             if(!it.hasNext())
                throw new  InvalidOperationException("Sequence is empty");
             T last = it.next();
@@ -774,7 +793,7 @@ public class Enumerable {
         if(function == null)
             throw new NullArgumentException("function");
 
-        try(ClosableIterator<T> it = (ClosableIterator<T>) src.iterator()){
+        try(CloseableIterator<T> it = (CloseableIterator<T>) src.iterator()){
             if(!it.hasNext())
                 throw new InvalidOperationException("Source sequence was empty");
             T current = it.next();
@@ -1533,7 +1552,7 @@ public class Enumerable {
                 minKey = candidateKey;
             }
         }
-        if(it instanceof ClosableIterator) ((ClosableIterator) it).close();
+        if(it instanceof CloseableIterator) ((CloseableIterator) it).close();
         return min;
     }
 
@@ -1591,7 +1610,7 @@ public class Enumerable {
                 maxKey = candidateKey;
             }
         }
-        if(it instanceof ClosableIterator) ((ClosableIterator) it).close();
+        if(it instanceof CloseableIterator) ((CloseableIterator) it).close();
         return max;
     }
 
@@ -1639,12 +1658,173 @@ public class Enumerable {
 
     // work on Float version
 
-    // ----------------------------- ElementAt (IE) -----------------------------
+    // ----------------------------- ElementAt/OrDefault (IE) -----------------------------
+
+    public static <T> T elementAt(Iterable<T> src, int index){
+        // Java doesn't have "out" params nor does it allow "passing by reference"
+        T element = tryElementAt(src, index);
+        if(element == null)
+            throw new ArgumentOutOfRangeException("index out of range");
+        return element;
+    }
+
+    public static <T> T elementAtOrNull(Iterable<T> src, int index){
+        return tryElementAt(src, index);
+    }
+
+    @SuppressWarnings("unchecked")
+    private static <T> T tryElementAt(Iterable<T> src, int index){
+        if(src == null)
+            throw new NullArgumentException("Source");
+
+        if (index < 0)
+            return null;
+
+        if(src instanceof Collection){
+            Collection<T> c = (Collection<T>)src;
+            int count = c.size();
+
+            if(index >= count)
+                return null;
+
+            if(src instanceof List)
+                return (T)((List) src).get(index);
+        }
+
+        Iterator<T> it = src.iterator();
+        // Note use of -1 so that we start off my moving onto element 0.
+        // Don't want to use i <= index in case index == Integer.MaxValue!
+        if(it.hasNext()){
+            for(int i = -1; i < index; i++){
+                it.next();
+                if(!it.hasNext())
+                    return null;
+            }
+            T e = it.next();
+            if(it instanceof CloseableIterator) ((CloseableIterator) it).close();
+            return e;
+        }
+
+
+        if(it instanceof CloseableIterator) ((CloseableIterator) it).close();
+        return null;
+    }
+
+    // ----------------------------- Contains (IE) -----------------------------
+
+    public static <T> boolean contains(Iterable<T> src, T value){
+        if(src != null && src instanceof Set)
+            return ((Set) src).contains(value);
+        return contains(src, value, new DefaultEquality<>());
+    }
+
+    public static <T> boolean contains(Iterable<T> src, T value, ICompareEquality<T> compareEquality){
+        if(src == null)
+            throw new NullArgumentException("source");
+
+        compareEquality = compareEquality != null ? compareEquality : new DefaultEquality<>();
+        for(T item : src)
+            if(compareEquality.equals(value, item))
+                return true;
+
+        return false;
+    }
+
+    // ----------------------------- Cast/OfType (IE) -----------------------------
+    // Not implementing this as these are absolutely unnecessary in Java.
+    // These two operators work on Non-generic Iterables... however Iterables are all generic since Java 5.
+    // They turn a non-generic sequence into its generic counterpart.
+    // Java's parameterized types are merely Generic types of raw types e.g. Thing -> Thing<?>. Making these
+    // Operators useless.
+
+    // ----------------------------- SequenceEqual (IE) -----------------------------
+    public static <T> boolean sequenceEqual(Iterable<T> first, Iterable<T> second){
+        return sequenceEqual(first, second, new DefaultEquality<>());
+    }
+
+    public static <T> boolean sequenceEqual(Iterable<T> first, Iterable<T> second, ICompareEquality<T> compareEquality){
+        if(first == null)
+            throw new NullArgumentException("first sequence");
+        if(second == null)
+            throw new NullArgumentException("second sequence");
+
+        if(first instanceof Collection && second instanceof Collection)
+            if(((Collection) first).size() != ((Collection) second).size())
+                return false;
+
+        compareEquality = compareEquality != null ? compareEquality : new DefaultEquality<>();
+
+        // Get the iterators of both sequences and use them "in parallel"
+        Iterator<T> it1 = first.iterator(), it2 = second.iterator();
+
+        while(true){
+            boolean n1 = it1.hasNext();
+            boolean n2 = it2.hasNext();
+
+            if(n1 != n2) {
+                closeIterators(it1, it2);
+                return false;
+            }
+
+            // At this point both sequences could be exhausted.
+            if(!n1) {
+                closeIterators(it1, it2);
+                return true;
+            }
+
+            if(!compareEquality.equals(it1.next(), it2.next())) {
+                closeIterators(it1, it2);
+                return false;
+            }
+        }
+    }
+
+    // ----------------------------- Zip (DE) -----------------------------
+
+    public static <T, S, R> Iterable<R> zip(Iterable<T> first, Iterable<S> second,
+                                            BiFunction<T, S, R> resultSelector){
+        if(first == null)
+            throw new NullArgumentException("First sequence");
+        if(second == null)
+            throw new NullArgumentException("Second sequence");
+        if(resultSelector == null)
+            throw new NullArgumentException("Function");
+        return zipImp(first, second, resultSelector);
+    }
+
+    private static <T, S, R> Iterable<R> zipImp(Iterable<T> first, Iterable<S> second,
+                                                BiFunction<T, S, R> resultSelector){
+        Iterator<T> it1 = first.iterator();
+        Iterator<S> it2 = second.iterator();
+
+        return (Yield<R>) yield -> {
+            while(it1.hasNext() && it2.hasNext())
+                yield.returning(resultSelector.apply(it1.next(), it2.next()));
+            closeIterators(it1, it2);
+        };
+    }
+
+    // ----------------------------- AsEnumerable (IE) -----------------------------
+
+    // Almost pointless operator. In LINQ this is usually used for changing the compile-time type of the expression.
+    // Usually used for "out of process" queries (i.e. Databases). More fitting for LINQ-to-SQL.
+
+    public static <T> Iterable<T> asIterable(Iterable<T> src){
+        return src;
+    }
+
+    // ----------------------------- AsBlaqCollection (DE) -----------------------------
 
 
     // Consider using reflection to handle Argument validation messages. C# uses nameof()
 
-    /* --------------------Nested Classes---------------------- */
+    /* --------------------Nested Classes & Helpers---------------------- */
+
+    private static void closeIterators(Iterator<?>... its){
+        for(Iterator<?> i : its)
+            if(i instanceof CloseableIterator)
+                ((CloseableIterator) i).close();
+    }
 
     private static class EmptyIterable<T> implements Iterable<T>{
 

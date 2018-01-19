@@ -3,9 +3,7 @@ package playground.test;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import playground.Enumerable;
-import playground.util.ClosableIterator;
 
-import java.util.Collections;
 import java.util.Iterator;
 
 // FLOPPED TEST need to work around Java Generics.
