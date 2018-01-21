@@ -1,4 +1,4 @@
-package playground.FillerKeywords;
+package playground.tools;
 
 public class ExceptionHandles {
     public interface ExceptionSupplier<T, E extends Exception>{

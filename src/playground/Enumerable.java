@@ -5,7 +5,7 @@ import playground.util.*;
 
 import java.util.*;
 
-import playground.FillerKeywords.Yield;
+import playground.tools.Yield;
 
 import java.util.function.*;
 
@@ -148,7 +148,7 @@ public class Enumerable {
     //TODO: Empty -- Static generic fields are illegal in java (From JavaDoc: We cannot declare static fields whose types are type parameters)
     @SuppressWarnings("unchecked")
     public static <T> Iterable<T> empty(){
-        return (Iterable<T>) EmptyIterable.EMPTY_ITERABLE;
+        return (Iterable<T>) EmptyIterable.INSTANCE;
     }
 
     // ----------------------------- Repeat -----------------------------
@@ -470,9 +470,13 @@ public class Enumerable {
     public static <T> boolean any(Iterable<T> src){
         if(src == null)
             throw new NullArgumentException("src");
-        try(CloseableIterator<T> iterator = (CloseableIterator<T>) src.iterator()){
-            return iterator.hasNext();
+        Iterator<T> it = src.iterator();
+        if(it instanceof CloseableIterator){
+            boolean b = it.hasNext();
+            ((CloseableIterator) it).close();
+            return b;
         }
+        return it.hasNext();
     }
 
     /**
@@ -607,14 +611,16 @@ public class Enumerable {
     public static <T> T single(Iterable<T> src){
         if(src == null)
             throw new NullArgumentException("src");
-        try(CloseableIterator<T> it = (CloseableIterator<T>) src.iterator()){
-            if(!it.hasNext())
-                throw new InvalidOperationException("Sequence is empty");
-            T e = it.next();
-            if(it.hasNext())
-                throw new InvalidOperationException("Sequence has multiple elements");
-            return e;
+        Iterator<T> it = src.iterator();
+        if(!it.hasNext())
+            throw new InvalidOperationException("Sequence is empty");
+        T e = it.next();
+        if(it.hasNext()) {
+            if(it instanceof CloseableIterator)
+                ((CloseableIterator) it).close();
+            throw new InvalidOperationException("Sequence has multiple elements");
         }
+        return e;
     }
 
     public static <T> T single(Iterable<T> src, Predicate<T> predicate){
@@ -643,19 +649,14 @@ public class Enumerable {
             throw new NullArgumentException("src");
 
         Iterator<T> it = src.iterator();
-        if(!it.hasNext()) {
-            if(it instanceof CloseableIterator)
-                ((CloseableIterator) it).close();
+        if(!it.hasNext())
             return null;
-        }
         T e = it.next();
         if(it.hasNext()) {
             if(it instanceof CloseableIterator)
                 ((CloseableIterator) it).close();
             throw new InvalidOperationException("Sequence contained multiple elements");
         }
-        if(it instanceof CloseableIterator)
-            ((CloseableIterator) it).close();
         return e;
     }
 
@@ -691,20 +692,19 @@ public class Enumerable {
     public static <T> T last(Iterable<T> src){
         if(src == null)
             throw new NullArgumentException("src");
-        try{
+        if(src instanceof List){
             List<T> c = (List<T>)src;
             if(c.size() == 0)
                 throw new InvalidOperationException("Sequence is empty");
             return c.get(c.size() - 1);
-        } catch (ClassCastException ignored){}
-        try(CloseableIterator<T> it = (CloseableIterator<T>)src.iterator()){
-            if(!it.hasNext())
-               throw new  InvalidOperationException("Sequence is empty");
-            T last = it.next();
-            while(it.hasNext())
-                last = it.next();
-            return last;
         }
+        Iterator<T> it = src.iterator();
+        if(!it.hasNext())
+            throw new  InvalidOperationException("Sequence is empty");
+        T last = it.next();
+        while(it.hasNext())
+            last = it.next();
+        return last;
     }
 
     /**
@@ -738,10 +738,10 @@ public class Enumerable {
     public static <T> T lastOrDefault(Iterable<T> src){
         if(src == null)
             throw new NullArgumentException("src") ;
-        try{
+        if(src instanceof List){
             List<T> c = (List<T>)src;
             return c.size() == 0 ? null : c.get(c.size() - 1);
-        } catch (ClassCastException ignored){}
+        }
         T last = null;
         for(T i : src)
             last = i;
@@ -793,14 +793,13 @@ public class Enumerable {
         if(function == null)
             throw new NullArgumentException("function");
 
-        try(CloseableIterator<T> it = (CloseableIterator<T>) src.iterator()){
-            if(!it.hasNext())
-                throw new InvalidOperationException("Source sequence was empty");
-            T current = it.next();
-            while(it.hasNext())
-                current = function.apply(current, it.next());
-            return current;
-        }
+        Iterator<T> it = src.iterator();
+        if(!it.hasNext())
+            throw new InvalidOperationException("Source sequence was empty");
+        T current = it.next();
+        while(it.hasNext())
+            current = function.apply(current, it.next());
+        return current;
     }
 
     public static <T, S> S aggregate(Iterable<T> src, S seed, BiFunction<S, T, S> function){
@@ -1809,11 +1808,10 @@ public class Enumerable {
     // Almost pointless operator. In LINQ this is usually used for changing the compile-time type of the expression.
     // Usually used for "out of process" queries (i.e. Databases). More fitting for LINQ-to-SQL.
 
-    public static <T> Iterable<T> asIterable(Iterable<T> src){
+    // Refactored to return a BlaqIterable object
+    public static <T> Iterable<T> asBlaqIterable(Iterable<T> src){
         return src;
     }
-
-    // ----------------------------- AsBlaqCollection (DE) -----------------------------
 
 
     // Consider using reflection to handle Argument validation messages. C# uses nameof()
@@ -1826,18 +1824,14 @@ public class Enumerable {
                 ((CloseableIterator) i).close();
     }
 
-    private static class EmptyIterable<T> implements Iterable<T>{
-
-        static final EmptyIterable<Object> EMPTY_ITERABLE = new EmptyIterable<>();
+    private enum EmptyIterable implements Iterable<Object>{
+        INSTANCE;
 
         @NotNull
         @Override
-        public Iterator<T> iterator() {
+        public Iterator<Object> iterator() {
             return Collections.emptyIterator();
         }
-
-        @Override
-        public void forEach(Consumer<? super T> action){ Objects.requireNonNull(action); }
     }
 
     private static class DefaultEquality<T> implements ICompareEquality<T>{}

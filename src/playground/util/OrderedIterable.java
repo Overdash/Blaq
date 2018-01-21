@@ -1,7 +1,7 @@
 package playground.util;
 
 import org.jetbrains.annotations.NotNull;
-import playground.FillerKeywords.Yield;
+import playground.tools.Yield;
 import playground.NullArgumentException;
 import playground.annotations.Readonly;
 
@@ -56,7 +56,6 @@ public class OrderedIterable<V, TCompositeKey> implements IOrderedIterable<V> {
 
     @NotNull
     @Override
-    @SuppressWarnings("unchecked")
     public Iterator<V> iterator() {
         // Sorting will occur here
         /*
@@ -77,6 +76,7 @@ public class OrderedIterable<V, TCompositeKey> implements IOrderedIterable<V> {
         for(int i = 0; i < indexes.length ; i++)
             indexes[i] = i;
 
+        @SuppressWarnings("unchecked")
         TCompositeKey[] keys = (TCompositeKey[]) new Object[count]; // Consider HashMap for this and indexes
         for (int i = 0; i<keys.length; i++)
             keys[i] = compositeSelector.apply(data[i]);
@@ -85,7 +85,7 @@ public class OrderedIterable<V, TCompositeKey> implements IOrderedIterable<V> {
         // without the whole Iterable/OrderIterable being sorted yet.
         // So a Stack of "calls" to our sort needs to be kept.
         final int[] nextYield = {0}; // Use single element array due to how values in lambdas must be final.
-        Stack<SortCache> stack = new Stack<>();
+        Deque<SortCache> stack = new ArrayDeque<>(); // Use an ArrayDeque as a stack here (since this API is not thread-safe)
         stack.push(new SortCache(0, count -1)); // Simulates the call to sort(0, count-1)
         while(stack.size() > 0){
             SortCache previousCall = stack.pop();

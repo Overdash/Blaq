@@ -1,7 +1,9 @@
 package playground;
 
 import org.junit.jupiter.api.Test;
-import playground.FillerKeywords.Yield;
+import playground.tools.Yield;
+import playground.util.BlaqIterable;
+import playground.util.BlaqList;
 
 import java.util.*;
 
@@ -76,7 +78,7 @@ public class TestGrounds {
         verifyZeroInteractions(sideEffects);
 
         int sideEffectNumber = 1;
-        for  (Integer i : numbers) {
+        for  (Integer ignored : numbers) {
             verify(sideEffects).sideEffect(sideEffectNumber++);
             verifyNoMoreInteractions(sideEffects);
         }
@@ -105,5 +107,11 @@ public class TestGrounds {
 //    @Test void testing_this(){
 //        Iterable<String> s = new ArrayList<>();
 //    }
+
+    @Test void blaqList_test(){
+        BlaqIterable<Integer> source = new BlaqList<>(Arrays.asList(1,3,7,9,10));
+        BlaqIterable<Integer> res = source.where(x -> x < 8).project(x -> x*x);
+        assertEquals(res, Arrays.asList(1, 9, 7*7));
+    }
 
 }

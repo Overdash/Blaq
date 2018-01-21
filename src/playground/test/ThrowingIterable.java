@@ -3,7 +3,7 @@ package playground.test;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Assertions;
 import playground.util.CloseableIterator;
-import playground.FillerKeywords.Yield;
+import playground.tools.Yield;
 
 import java.util.Iterator;
 import java.util.function.Function;

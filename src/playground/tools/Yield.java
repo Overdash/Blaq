@@ -1,4 +1,4 @@
-package playground.FillerKeywords;
+package playground.tools;
 
 import org.jetbrains.annotations.NotNull;
 import playground.util.CloseableIterator;
@@ -9,11 +9,11 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static playground.FillerKeywords.ExceptionHandles.unchecked;
-import static playground.FillerKeywords.Yield.Completed.completed;
-import static playground.FillerKeywords.Yield.FlowControl.proceed;
-import static playground.FillerKeywords.Yield.IfAbsent.ifAb;
-import static playground.FillerKeywords.Yield.Message.message;
+import static playground.tools.ExceptionHandles.unchecked;
+import static playground.tools.Yield.Completed.completed;
+import static playground.tools.Yield.FlowControl.proceed;
+import static playground.tools.Yield.IfAbsent.ifAb;
+import static playground.tools.Yield.Message.message;
 
 /**
  * Threading implementation of C#'s yield-break and yield-return functionality.

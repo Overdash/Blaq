@@ -4,6 +4,7 @@ import playground.annotations.Readonly;
 
 import java.util.Comparator;
 
+@Deprecated
 public class ReverseComparator<T> implements Comparator<T> {
 
     @Readonly
