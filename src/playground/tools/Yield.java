@@ -20,6 +20,7 @@ import static playground.tools.Yield.Message.message;
  * Able to produce generators with this class. Values are generated one at a time rather than at once on execution.
  * Alternatively, this could've been implemented with some bytecode or compiler transformations.
  *
+ * Credit where credit is due: Jim Blackler and Benjamin Weber
  * @param <T>
  */
 public interface Yield<T> extends Iterable<T> {
@@ -46,7 +47,8 @@ public interface Yield<T> extends Iterable<T> {
     }
 
     /**
-     * Nested class defining the properties and behaviors of the yield. Each yield must be disposed of (closed) to free threads.
+     * Nested class defining the properties and behaviors of the yield.
+     * Threads are resources, therefore each yield must be disposed of (closed) to free threads.
      * @param <T>
      */
     class YieldDef<T> implements Iterable<T>, CloseableIterator<T> {

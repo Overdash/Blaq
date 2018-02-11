@@ -1,5 +1,7 @@
 package playground.util;
 
+import playground.Enumerable;
+
 import java.util.Comparator;
 import java.util.function.Function;
 
@@ -14,7 +16,7 @@ import java.util.function.Function;
  *      - Does not sort in-place. Sorting operators return a new sequence which represents the results of the sort.
  * @param <V> Type of elements of the sequence.
  */
-public interface IOrderedIterable<V> extends Iterable<V>{
+public interface IOrderedIterable<V> extends BlaqIterable<V>{
 
     /**
      * Performs a subsequent ordering on the elements of an {@link IOrderedIterable} according to a key
@@ -27,4 +29,22 @@ public interface IOrderedIterable<V> extends Iterable<V>{
     <K> IOrderedIterable<V> createOrderedIterable(Function<V, K> keySelector,
                                                   Comparator<K> comparator,
                                                   boolean descending);
+
+    /* Default ops */
+
+    default <K> IOrderedIterable<V> thenBy(Function<V, K> keySelector){
+        return Enumerable.thenBy(this, keySelector);
+    }
+
+    default <K> IOrderedIterable<V> thenBy(Function<V, K> keySelector, Comparator<K> comparator){
+        return Enumerable.thenBy(this, keySelector, comparator);
+    }
+
+    default <K> IOrderedIterable<V> thenByDescending(Function<V, K> keySelector){
+        return Enumerable.thenByDescending(this, keySelector);
+    }
+
+    default <K> IOrderedIterable<V> thenByDescending(Function<V, K> keySelector, Comparator<K> comparator){
+        return Enumerable.thenByDescending(this, keySelector, comparator);
+    }
 }

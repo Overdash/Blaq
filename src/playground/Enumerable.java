@@ -126,7 +126,7 @@ public class Enumerable {
     }
 
     // ----------------------------- Range -----------------------------
-    public static <T> Iterable<Integer> range(int start, int count){
+    public static Iterable<Integer> range(int start, int count){
         if(count < 0)
             throw new ArgumentOutOfRangeException("count");
 
@@ -470,13 +470,7 @@ public class Enumerable {
     public static <T> boolean any(Iterable<T> src){
         if(src == null)
             throw new NullArgumentException("src");
-        Iterator<T> it = src.iterator();
-        if(it instanceof CloseableIterator){
-            boolean b = it.hasNext();
-            ((CloseableIterator) it).close();
-            return b;
-        }
-        return it.hasNext();
+        return src.iterator().hasNext();
     }
 
     /**
@@ -533,7 +527,7 @@ public class Enumerable {
             throw new NullArgumentException("src");
         Iterator<T> it = src.iterator();
         if(it.hasNext())
-            firstCIOpt(it);
+            return it.next();
         throw new InvalidOperationException("Empty sequence");
     }
 
@@ -572,19 +566,9 @@ public class Enumerable {
             throw new NullArgumentException("src");
         Iterator<T> it = src.iterator();
         if(it.hasNext())
-            return firstCIOpt(it);
+            return it.next();
         return null;
         //            return it.hasNext() ? it.next() : null;
-    }
-
-    private static <T> T firstCIOpt(Iterator<T> it){
-        // Optimising first/OrNull for when the iterator is a CloseableIterator.
-        if(it instanceof CloseableIterator){
-            T t = it.next();
-            ((CloseableIterator) it).close();
-            return t;
-        }
-        return it.next();
     }
 
     /**
@@ -615,11 +599,8 @@ public class Enumerable {
         if(!it.hasNext())
             throw new InvalidOperationException("Sequence is empty");
         T e = it.next();
-        if(it.hasNext()) {
-            if(it instanceof CloseableIterator)
-                ((CloseableIterator) it).close();
+        if(it.hasNext())
             throw new InvalidOperationException("Sequence has multiple elements");
-        }
         return e;
     }
 
@@ -652,11 +633,8 @@ public class Enumerable {
         if(!it.hasNext())
             return null;
         T e = it.next();
-        if(it.hasNext()) {
-            if(it instanceof CloseableIterator)
-                ((CloseableIterator) it).close();
+        if(it.hasNext())
             throw new InvalidOperationException("Sequence contained multiple elements");
-        }
         return e;
     }
 
@@ -841,6 +819,7 @@ public class Enumerable {
 
     private static <T> Iterable<T> distinctImp(Iterable<T> src, ICompareEquality<T> compareEquality) {
         return (Yield<T>) yield -> {
+            // TODO
             HashSet<T> passedElements = new HashSet<>(/*compareEquality*/);
             for(T item : src)
                 if(passedElements.add(item))
@@ -881,7 +860,7 @@ public class Enumerable {
         return intersect(first, second, null);
     }
 
-    private static <T> Iterable<T> intersect(Iterable<T> first, Iterable<T> second, ICompareEquality<T> compareEquality) {
+    public static <T> Iterable<T> intersect(Iterable<T> first, Iterable<T> second, ICompareEquality<T> compareEquality) {
         if(first == null)
             throw new NullArgumentException("first");
         if(second == null)
@@ -893,11 +872,12 @@ public class Enumerable {
     private static <T> Iterable<T> intersectImp(Iterable<T> first, Iterable<T> second, ICompareEquality<T> compareEquality) {
 //        Collection<T> conduit = toList(second);
         return (Yield<T>) y -> {
-          HashSet<T> potentialItems = new HashSet<>(/*, compareEquality*/);
-          addToCollection(potentialItems, second);
-          for(T item : first)
-              if(potentialItems.remove(item))
-                  y.returning(item);
+            // TODO
+            HashSet<T> potentialItems = new HashSet<>(/*, compareEquality*/);
+            addToCollection(potentialItems, second);
+            for(T item : first)
+                if(potentialItems.remove(item))
+                    y.returning(item);
         };
     }
 
@@ -1551,7 +1531,6 @@ public class Enumerable {
                 minKey = candidateKey;
             }
         }
-        if(it instanceof CloseableIterator) ((CloseableIterator) it).close();
         return min;
     }
 
@@ -1609,7 +1588,6 @@ public class Enumerable {
                 maxKey = candidateKey;
             }
         }
-        if(it instanceof CloseableIterator) ((CloseableIterator) it).close();
         return max;
     }
 
@@ -1699,13 +1677,9 @@ public class Enumerable {
                 if(!it.hasNext())
                     return null;
             }
-            T e = it.next();
-            if(it instanceof CloseableIterator) ((CloseableIterator) it).close();
-            return e;
+            return it.next();
         }
 
-
-        if(it instanceof CloseableIterator) ((CloseableIterator) it).close();
         return null;
     }
 
@@ -1737,6 +1711,7 @@ public class Enumerable {
     // Operators useless.
 
     // ----------------------------- SequenceEqual (IE) -----------------------------
+
     public static <T> boolean sequenceEqual(Iterable<T> first, Iterable<T> second){
         return sequenceEqual(first, second, new DefaultEquality<>());
     }
@@ -1761,18 +1736,15 @@ public class Enumerable {
             boolean n2 = it2.hasNext();
 
             if(n1 != n2) {
-                closeIterators(it1, it2);
                 return false;
             }
 
             // At this point both sequences could be exhausted.
             if(!n1) {
-                closeIterators(it1, it2);
                 return true;
             }
 
             if(!compareEquality.equals(it1.next(), it2.next())) {
-                closeIterators(it1, it2);
                 return false;
             }
         }
@@ -1799,7 +1771,6 @@ public class Enumerable {
         return (Yield<R>) yield -> {
             while(it1.hasNext() && it2.hasNext())
                 yield.returning(resultSelector.apply(it1.next(), it2.next()));
-            closeIterators(it1, it2);
         };
     }
 
@@ -1809,8 +1780,21 @@ public class Enumerable {
     // Usually used for "out of process" queries (i.e. Databases). More fitting for LINQ-to-SQL.
 
     // Refactored to return a BlaqIterable object
-    public static <T> Iterable<T> asBlaqIterable(Iterable<T> src){
-        return src;
+    public static <T> BlaqIterable<T> asBlaqIterable(Iterable<T> src){
+        // Optimisations
+        if(src instanceof ArrayDeque)
+            return new BlaqDeque<>(src);
+        if(src instanceof List){
+            if(src instanceof LinkedList)
+                return new BlaqLinkedList<>(src);
+            if(src instanceof ArrayList)
+                return new BlaqList<>(src);
+        }
+        if(src instanceof Set)
+            return new BlaqSet<>(src);
+
+        // Wrap the src with BlaqIterable
+        return src::iterator;
     }
 
 
@@ -1818,11 +1802,11 @@ public class Enumerable {
 
     /* --------------------Nested Classes & Helpers---------------------- */
 
-    private static void closeIterators(Iterator<?>... its){
-        for(Iterator<?> i : its)
-            if(i instanceof CloseableIterator)
-                ((CloseableIterator) i).close();
-    }
+//    private static void closeIterators(Iterator<?>... its){
+//        for(Iterator<?> i : its)
+//            if(i instanceof CloseableIterator)
+//                ((CloseableIterator) i).close();
+//    }
 
     private enum EmptyIterable implements Iterable<Object>{
         INSTANCE;

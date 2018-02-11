@@ -1,7 +1,7 @@
 package playground.test;
 
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Test;
+import org.junit.Assert;
+import org.junit.Test;
 import playground.Enumerable;
 import playground.NullArgumentException;
 
@@ -9,67 +9,63 @@ import java.util.*;
 import java.util.function.BiPredicate;
 import java.util.function.Predicate;
 
-class WhereTest {
+public class WhereTest {
 
-    @Test
-    void nullSourceThrowsNullArgumentException(){
+    @Test(expected = NullArgumentException.class)
+    public void nullSourceThrowsNullArgumentException(){
         Iterable<Integer> source = null;
-        Assertions.assertThrows(NullArgumentException.class,
-                () -> Enumerable.where(source, x -> x > 5));
+        Enumerable.where(source, x -> x > 5);
     }
 
-    @Test
-    void nullPredicateThrowsNullArgumentException(){
+    @Test(expected = NullArgumentException.class)
+    public void nullPredicateThrowsNullArgumentException(){
         Iterable<Integer> source = Arrays.asList(1,3,7,9,10);
-        Assertions.assertThrows(NullArgumentException.class,
-                ()-> Enumerable.where(source, (Predicate<Integer>) null));
+        Enumerable.where(source, (Predicate<Integer>) null);
     }
 
-    @Test
-    void withIndexNullSourceThrowsNullArgumentException(){
+    @Test(expected = NullArgumentException.class)
+    public void withIndexNullSourceThrowsNullArgumentException(){
         Iterable<Integer> source = null;
-        Assertions.assertThrows(NullArgumentException.class,
-                () -> Enumerable.where(source, (x, index) -> x > 5));
+        Enumerable.where(source, (x, index) -> x > 5);
     }
 
-    @Test
-    void withIndexNullPredicateThrowsNullArgumentException(){
+    @Test(expected = NullArgumentException.class)
+    public void withIndexNullPredicateThrowsNullArgumentException(){
         Iterable<Integer> source = Arrays.asList(1,3,7,9,10);
-        Assertions.assertThrows(NullArgumentException.class,
-                ()-> Enumerable.where(source, (BiPredicate<Integer,Integer>) null));
+        Enumerable.where(source, (BiPredicate<Integer,Integer>) null);
     }
 
     @Test
-    void simpleFiltering(){
+    public  void simpleFiltering(){
         Iterable<Integer> src = Arrays.asList(1,3,4,2,8,1);
         Iterable<Integer> filteredList = Enumerable.where(src, x -> x < 4);
-        Assertions.assertEquals(Enumerable.toList(filteredList), Arrays.asList(1,3,2,1));
+        Assert.assertEquals(Enumerable.toList(filteredList), Arrays.asList(1,3,2,1));
     }
 
     @Test
-    void withIndexSimpleFiltering(){
+    public void withIndexSimpleFiltering(){
         Iterable<Integer> src = Arrays.asList(1,3,4,2,8,1);
         Iterable<Integer> filteredList = Enumerable.where(src, (x, index) -> x < index);
-        Assertions.assertEquals(Enumerable.toList(filteredList), Arrays.asList(2,1));
+        Assert.assertEquals(Enumerable.toList(filteredList), Arrays.asList(2,1));
     }
 
     @Test
-    void emptySource(){
+    public void emptySource(){
         Iterable<Integer> src = Collections.emptyList();
         Iterable<Integer> filteredList = Enumerable.where(src, x -> x<4);
-        Assertions.assertEquals(Enumerable.toList(filteredList), Collections.emptyList());
+        Assert.assertEquals(Enumerable.toList(filteredList), Collections.emptyList());
     }
 
     @Test
-    void withIndexEmptySource(){
+    public void withIndexEmptySource(){
         Iterable<Integer> src = Collections.emptyList();
         Iterable<Integer> filteredList = Enumerable.where(src, (x, index) -> x<4);
-        Assertions.assertEquals(Enumerable.toList(filteredList), Collections.emptyList());
+        Assert.assertEquals(Enumerable.toList(filteredList), Collections.emptyList());
     }
 
-//    @Test // -> Infinite execution, exception isn't thrown by method... I think I achieve deferred execution... Just idk how to test it lol
-//    void WithIndexExecutionIsDeferred(){
-//        ThrowingIterable.AssertDeferred(src -> Enumerable.where(src, x -> x > 0));
-//        //Assertions.assertThrows(UnsupportedOperationException.class, () -> ThrowingIterable.AssertDeferred(src -> Enumerable.where(src, x -> x > 0)));
-//    }
+    //@Test // -> Infinite execution, exception isn't thrown by method... I think I achieve deferred execution... Just idk how to test it lol
+    public void WithIndexExecutionIsDeferred(){
+        ThrowingIterable.AssertDeferred(src -> Enumerable.where(src, x -> x > 0));
+        //Assertions.assertThrows(UnsupportedOperationException.class, () -> ThrowingIterable.AssertDeferred(src -> Enumerable.where(src, x -> x > 0)));
+    }
 }

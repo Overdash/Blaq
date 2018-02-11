@@ -1,13 +1,13 @@
 package playground;
 
-import org.junit.jupiter.api.Test;
+import org.junit.Test;
 import playground.tools.Yield;
 import playground.util.BlaqIterable;
 import playground.util.BlaqList;
 
 import java.util.*;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static junit.framework.TestCase.assertEquals;
 import static org.mockito.Mockito.*;
 
 public class TestGrounds {
@@ -35,7 +35,8 @@ public class TestGrounds {
         };
     }
 
-    @Test public void should_have_expected_values() {
+    @Test
+    public void should_have_expected_values() {
         ArrayList<String> results = new ArrayList<>();
 
         for (String result : fooBar(ignoreSideEffects)) {
@@ -108,10 +109,10 @@ public class TestGrounds {
 //        Iterable<String> s = new ArrayList<>();
 //    }
 
-    @Test void blaqList_test(){
-        BlaqIterable<Integer> source = new BlaqList<>(Arrays.asList(1,3,7,9,10));
+    @Test public void blaqList_test(){
+        BlaqIterable<Integer> source = new BlaqList<>((Iterable<Integer>) Arrays.asList(1,3,7,9,10));
         BlaqIterable<Integer> res = source.where(x -> x < 8).project(x -> x*x);
-        assertEquals(res, Arrays.asList(1, 9, 7*7));
+        assertEquals(res.toList(), Arrays.asList(1, 9, 7*7));
     }
 
 }

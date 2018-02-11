@@ -1,7 +1,8 @@
 package playground.test;
 
 import org.jetbrains.annotations.NotNull;
-import org.junit.jupiter.api.Assertions;
+import org.junit.Assert;
+import org.junit.Test;
 import playground.util.CloseableIterator;
 import playground.tools.Yield;
 
@@ -15,11 +16,11 @@ public final class ThrowingIterable implements Iterable<Integer> {
         throw new UnsupportedOperationException();
     }
 
+    @Test(expected = UnsupportedOperationException.class)
     public static <T> void AssertDeferred(Function<Iterable<Integer>, Iterable<T>> deferredExecution){
         ThrowingIterable source = new ThrowingIterable();
         Yield<T> result = (Yield<T>)deferredExecution.apply(source);
-        try(CloseableIterator<T> it = result.iterator()) {
-            Assertions.assertThrows(UnsupportedOperationException.class, it::next);
-        }
+        Iterator<T> it = result.iterator();
+        it.next();
     }
 }

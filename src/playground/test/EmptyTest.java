@@ -1,7 +1,7 @@
 package playground.test;
 
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Test;
+import org.junit.Assert;
+import org.junit.Test;
 import playground.Enumerable;
 
 import java.util.Iterator;
@@ -12,7 +12,7 @@ public class EmptyTest {
     @Test
     void emptyContainsNoElements(){
         Iterator<? super Integer> it = Enumerable.empty().iterator();
-        Assertions.assertFalse(it.hasNext());
+        Assert.assertFalse(it.hasNext());
     }
 
     @Test
