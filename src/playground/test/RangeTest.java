@@ -2,8 +2,8 @@ package playground.test;
 
 import org.junit.Assert;
 import org.junit.Test;
-import playground.ArgumentOutOfRangeException;
-import playground.Enumerable;
+import blaq.core.ArgumentOutOfRangeException;
+import blaq.core.Enumerable;
 
 import java.util.Arrays;
 import java.util.Collections;

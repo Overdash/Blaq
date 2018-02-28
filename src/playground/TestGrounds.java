@@ -1,9 +1,9 @@
 package playground;
 
 import org.junit.Test;
-import playground.tools.Yield;
-import playground.util.BlaqIterable;
-import playground.util.BlaqList;
+import blaq.tools.Yield;
+import blaq.util.BlaqIterable;
+import blaq.util.BlaqList;
 
 import java.util.*;
 

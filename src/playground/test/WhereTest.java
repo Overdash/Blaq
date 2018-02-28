@@ -2,8 +2,10 @@ package playground.test;
 
 import org.junit.Assert;
 import org.junit.Test;
-import playground.Enumerable;
-import playground.NullArgumentException;
+import blaq.core.Enumerable;
+import blaq.core.NullArgumentException;
+import blaq.util.BlaqIterable;
+import blaq.util.BlaqList;
 
 import java.util.*;
 import java.util.function.BiPredicate;
@@ -61,6 +63,14 @@ public class WhereTest {
         Iterable<Integer> src = Collections.emptyList();
         Iterable<Integer> filteredList = Enumerable.where(src, (x, index) -> x<4);
         Assert.assertEquals(Enumerable.toList(filteredList), Collections.emptyList());
+    }
+
+    @Test
+    public void usingBlaqIterable(){ // Also test order
+        BlaqIterable<Integer> src = new BlaqList<>
+                ((Iterable<Integer>) Arrays.asList(1, 2, 3, 4, 5, 6, 1, 89, 112, 14, 41, 75, 89));
+        Assert.assertEquals(Arrays.asList(1, 2, 3, 1, 89, 112, 41, 75, 89), src.where(x -> x < 4 || x > 14).toList());
+
     }
 
     //@Test // -> Infinite execution, exception isn't thrown by method... I think I achieve deferred execution... Just idk how to test it lol

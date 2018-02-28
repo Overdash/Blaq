@@ -1,10 +1,8 @@
 package playground.test;
 
 import org.jetbrains.annotations.NotNull;
-import org.junit.Assert;
 import org.junit.Test;
-import playground.util.CloseableIterator;
-import playground.tools.Yield;
+import blaq.tools.Yield;
 
 import java.util.Iterator;
 import java.util.function.Function;

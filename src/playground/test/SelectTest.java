@@ -2,10 +2,9 @@ package playground.test;
 
 import org.junit.Assert;
 import org.junit.Test;
-import playground.Enumerable;
-import playground.NullArgumentException;
+import blaq.core.Enumerable;
+import blaq.core.NullArgumentException;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.function.BiFunction;
@@ -68,8 +67,8 @@ public class SelectTest {
 //    @Test // This test may not be possible because of the way Java handles lambda expressions (values must be new or final)
 //    void sideEffectsInProjection(){
 //        Iterable<Integer> src = new ArrayList<>(3);
-//        int count = 0;
-//        Iterable<Integer> filteredList = Enumerable.project(src, x -> count++);
+//        int size = 0;
+//        Iterable<Integer> filteredList = Enumerable.project(src, x -> size++);
 //
 //    }
 }
