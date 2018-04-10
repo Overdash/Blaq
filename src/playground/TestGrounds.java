@@ -1,5 +1,6 @@
 package playground;
 
+import blaq.core.Enumerable;
 import org.junit.Test;
 import blaq.tools.Yield;
 import blaq.util.BlaqIterable;

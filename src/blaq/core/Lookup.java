@@ -1,7 +1,10 @@
-package blaq.util;
+package blaq.core;
 
-import blaq.core.Enumerable;
 import blaq.annotations.Readonly;
+import blaq.util.Grouping;
+import blaq.util.ICompareEquality;
+import blaq.util.IGrouping;
+import blaq.util.ILookup;
 
 import java.util.*;
 
@@ -27,7 +30,7 @@ public final class Lookup<K, V> implements ILookup<K, V> {
     @Readonly
     private List<K> keys;
 
-    public Lookup(ICompareEquality<K> compareEquality){
+    Lookup(ICompareEquality<K> compareEquality){
         multimap = new HashMap<>(/*compareEquality*/);
         keys = new ArrayList<>();
     }

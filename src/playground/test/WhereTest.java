@@ -65,17 +65,13 @@ public class WhereTest {
         Assert.assertEquals(Enumerable.toList(filteredList), Collections.emptyList());
     }
 
-    @Test
+    /*@Test
     public void usingBlaqIterable(){ // Also test order
         BlaqIterable<Integer> src = new BlaqList<>
-                ((Iterable<Integer>) Arrays.asList(1, 2, 3, 4, 5, 6, 1, 89, 112, 14, 41, 75, 89));
+                (Arrays.asList(1, 2, 3, 4, 5, 6, 1, 89, 112, 14, 41, 75, 89));
+//        src.where(x -> x > 3 ).project()
+//        Enumerable.project(Enumerable.where(...,...))
         Assert.assertEquals(Arrays.asList(1, 2, 3, 1, 89, 112, 41, 75, 89), src.where(x -> x < 4 || x > 14).toList());
 
-    }
-
-    //@Test // -> Infinite execution, exception isn't thrown by method... I think I achieve deferred execution... Just idk how to test it lol
-    public void WithIndexExecutionIsDeferred(){
-        ThrowingIterable.AssertDeferred(src -> Enumerable.where(src, x -> x > 0));
-        //Assertions.assertThrows(UnsupportedOperationException.class, () -> ThrowingIterable.AssertDeferred(src -> Enumerable.where(src, x -> x > 0)));
-    }
+    }*/
 }

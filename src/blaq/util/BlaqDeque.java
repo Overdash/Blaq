@@ -12,6 +12,7 @@ public class BlaqDeque<T> extends ArrayDeque<T> implements BlaqIterable<T> {
     public BlaqDeque(Collection<? extends T> c){super(c);}
 
     public BlaqDeque(Iterable<T> src){  // Stack Constructor
+        //TODO Will the stack be reversed?
         super();
         for(T i : src)
             push(i);

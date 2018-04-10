@@ -8,6 +8,7 @@ import blaq.core.NullArgumentException;
 import java.util.ArrayList;
 import java.util.Arrays;
 
+// TODO tests for the OrNull versions
 public class FirstOrNullTest {
 
     @Test(expected = NullArgumentException.class)

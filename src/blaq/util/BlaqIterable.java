@@ -449,7 +449,14 @@ public interface BlaqIterable<T> extends Iterable<T> {
 
         @Override
         public String toString() {
-            return super.toString();
+            StringBuilder sb = new StringBuilder("[");
+            for (T t : iterable) {
+                sb.append(t);
+                sb.append(",");
+            }
+            if(sb.length() > 1) sb.deleteCharAt(sb.length() - 1);
+            sb.append("]");
+            return sb.toString();
         }
     }
 }

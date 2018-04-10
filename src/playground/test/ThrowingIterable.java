@@ -6,7 +6,7 @@ import blaq.tools.Yield;
 
 import java.util.Iterator;
 import java.util.function.Function;
-
+@Deprecated
 public final class ThrowingIterable implements Iterable<Integer> {
     @NotNull
     @Override

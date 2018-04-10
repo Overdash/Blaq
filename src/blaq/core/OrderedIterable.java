@@ -1,8 +1,9 @@
-package blaq.util;
+package blaq.core;
 
+import blaq.util.IOrderedIterable;
+import blaq.util.Tuple2;
 import org.jetbrains.annotations.NotNull;
 import blaq.tools.Yield;
-import blaq.core.NullArgumentException;
 import blaq.annotations.Readonly;
 
 import java.util.*;
@@ -17,7 +18,7 @@ public class OrderedIterable<V, TCompositeKey> implements IOrderedIterable<V> {
     @Readonly
     private Comparator<TCompositeKey> compositeComparator;
 
-    public OrderedIterable(final Iterable<V> src,
+    OrderedIterable(final Iterable<V> src,
                     Function<V, TCompositeKey> compositeSelector,
                     final Comparator<TCompositeKey> comparator){
         source = src;
@@ -64,7 +65,12 @@ public class OrderedIterable<V, TCompositeKey> implements IOrderedIterable<V> {
         *  - Be stable (so no QuickSort or Heap Sort)
         *  - (Ideally) allow the first results to be yielded without performing all the sorting work, and without affecting
         *    the performance in cases where all the results are needed.
-        * Despite instability, I'll be going for QuickSort. Later will enhance it to improve worst case performance.
+        * Despite instability, I'll be going for QuickSort. Later will enhance it to improve worst case performance.***
+        *
+        * Workings:
+        * Project each element to a key, and separately create an array of indexes (0, 1, 2, 3...).
+        * Sort the indexes by accessing the relevant key at any point, using indexes as tie-breakers.
+        * This requires an ad-hoc QuickSort, as we need to keep indexing into the indexes array.
         * */
 
         // First copy elements into an array
@@ -81,17 +87,29 @@ public class OrderedIterable<V, TCompositeKey> implements IOrderedIterable<V> {
         for (int i = 0; i<keys.length; i++)
             keys[i] = compositeSelector.apply(data[i]);
 
+        /* No continuous Yield (works)*/
+
+        quickSort(indexes, keys, 0, count - 1);
+
+        return ((Yield<V>) y -> {
+            for (int i : indexes)
+                y.returning(data[i]);
+        }).iterator();
+
+        /* With continuous Yield (development) */
         // We need to "fake" recursion to our sort so elements can be yielded when necessary
         // without the whole Iterable/OrderIterable being sorted yet.
         // So a Stack of "calls" to our sort needs to be kept.
-        final int[] nextYield = {0}; // Use single element array due to how values in lambdas must be final.
+        /*final int[] nextYield = {0}; // Use single element array due to how values in lambdas must be final.
         Deque<SortCache> stack = new ArrayDeque<>(); // Use an ArrayDeque as a stack here (since this API is not thread-safe)
-        stack.push(new SortCache(0, count -1)); // Simulates the call to sort(0, size-1)
+        stack.push(new SortCache(0, count - 1)); // Simulates the call to sort(0, size-1)
         while(stack.size() > 0){
             SortCache previousCall = stack.pop();
             int start = previousCall.start;
             int end = previousCall.end;
             if(end > start){
+                System.out.println(Arrays.toString(nextYield) + " end: " + end);
+
                 int pivot = start + (end - start)/2; // Using mid-point as pivot
                 int pivotPos = partition(indexes, keys, start, end, pivot);
                 // calls to sort() are replaced with stack.push()
@@ -100,16 +118,28 @@ public class OrderedIterable<V, TCompositeKey> implements IOrderedIterable<V> {
                 stack.push(new SortCache(pivotPos + 1, end));
                 stack.push(new SortCache(start, pivotPos - 1));
             } else { // Yield when no work needs to be done.
+                // TODO find the problem. Only prints nothing!! :(
+                System.out.println(Arrays.toString(nextYield) + " end: " + end);
                 return ((Yield<V>) yield ->{
                     while(nextYield[0] <= end) {
                         yield.returning(data[indexes[nextYield[0]]]);
                         nextYield[0]++;
+                        System.out.println(Arrays.toString(nextYield));
                     }
-                }).iterator(); // IDK If this works -> if not I gotta scrap this yielding requirement (since it's not mandatory)
+                }).iterator(); // This works (because quickSort way works)
+//                nextYield[0]++;
             }
         }
-        return Collections.emptyIterator(); // May cause issues
-        // Pg 156
+        return Collections.emptyIterator(); // May cause issues*/
+    }
+
+    private void quickSort(int[] indexes, TCompositeKey[] keys, int start, int end){
+        if(end > start){
+            int pivot = start + (end - start)/2;
+            int pivotPos = partition(indexes, keys, start, end, pivot);
+            quickSort(indexes, keys, start, pivotPos - 1);
+            quickSort(indexes, keys, pivotPos + 1, end);
+        }
     }
 
     private int partition(int[] indexes, TCompositeKey[] keys, int start, int end, int pivot) {

@@ -1,4 +1,4 @@
-package blaq.util;
+package blaq.core;
 
 import blaq.annotations.Readonly;
 
@@ -9,7 +9,7 @@ import java.util.Comparator;
  * @param <T> Primary key type
  * @param <S> Secondary key type
  */
-class CompositeKey<T, S> {
+final class CompositeKey<T, S> {
 
     @Readonly
     private T primary;

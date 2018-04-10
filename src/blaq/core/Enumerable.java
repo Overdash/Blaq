@@ -17,7 +17,7 @@ import java.util.function.*;
  * Methods are decoupled to prevent bugs/ errors in one implementation from contaminating other implementations.
  * @since BLAQ v0
  */
-public class Enumerable {
+public final class Enumerable {
     private Enumerable(){throw new AssertionError("BLAQ doesn't need instances!");} //prevent creating instances of this class
 
     // NO NEED FOR CloseableIterator -- Java Iterators are just abstractions, only need to close is closing resource.
@@ -30,7 +30,7 @@ public class Enumerable {
 
     // NOTE: Think of using Futures to achieve DE
 
-    // ----------------------------- Where - O(n) -----------------------------
+    // ----------------------------- Where (DE) -----------------------------
 
     /**
      * Filters a sequence based on a predicate.
@@ -86,7 +86,7 @@ public class Enumerable {
         };
     }
 
-    // ----------------------------- Select -----------------------------
+    // ----------------------------- Select (DE) -----------------------------
     public static <TSource, TResult> Iterable<TResult> project(Iterable<TSource> source,
                                                                Function<TSource, TResult> projector){
         if(source == null)
@@ -124,7 +124,7 @@ public class Enumerable {
         };
     }
 
-    // ----------------------------- Range -----------------------------
+    // ----------------------------- Range (DE) -----------------------------
     public static Iterable<Integer> range(int start, int count){
         if(count < 0)
             throw new ArgumentOutOfRangeException("size");
@@ -164,7 +164,7 @@ public class Enumerable {
         };
     }
 
-    // ----------------------------- Count & LongCount (Use immediate exec) -----------------------------
+    // ----------------------------- Count & LongCount (IE) -----------------------------
     // ----------------------------- Might be useless for Java... but !For SQL size(*) -----------------------------
 
     /**
@@ -322,7 +322,7 @@ public class Enumerable {
             src.add(it.next());
     }
 
-    // ----------------------------- SelectMany - O(n^2) -> T T U -----------------------------
+    // ----------------------------- SelectMany (DE) - O(n^2) -> T T U -----------------------------
     // Very important method, must understand it
 
     /**
@@ -458,7 +458,7 @@ public class Enumerable {
         };
     }
 
-    // ----------------------------- Any -----------------------------
+    // ----------------------------- Any (IE) -----------------------------
 
     /**
      * Determines whether a sequence containsKey any elements.
@@ -490,7 +490,7 @@ public class Enumerable {
         return false;
     }
 
-    // ----------------------------- All -----------------------------
+    // ----------------------------- All (IE) -----------------------------
 
     /**
      * Determines whether all elements of a sequence satisfy a condition.
@@ -550,7 +550,7 @@ public class Enumerable {
         throw new InvalidOperationException("No items match the predicate");
     }
 
-    // ----------------------------- FirstOrDefault -----------------------------
+    // ----------------------------- FirstOrDefault (IE) -----------------------------
     // (Rename firstOrNull makes more sense for java)
     // Can optimise to check if T is type Number, if so return 0 as default otherwise null.
 
@@ -590,7 +590,7 @@ public class Enumerable {
         return null;
     }
 
-    // ----------------------------- Single -----------------------------
+    // ----------------------------- Single (IE) -----------------------------
 
     public static <T> T single(Iterable<T> src){
         if(src == null)
@@ -624,7 +624,7 @@ public class Enumerable {
         return e;
     }
 
-    // ----------------------------- SingleOrDefault -----------------------------
+    // ----------------------------- SingleOrDefault (IE) -----------------------------
     public static <T> T singleOrNull(Iterable<T> src){
         if(src == null)
             throw new NullArgumentException("src");
@@ -656,7 +656,7 @@ public class Enumerable {
         return e;
     }
 
-    // ----------------------------- Last -----------------------------
+    // ----------------------------- Last (IE) -----------------------------
     // Difficult. Should be O(1) but the toList call makes it O(n). Java lacks indexers so must work around.
 
     /**
@@ -712,7 +712,7 @@ public class Enumerable {
         return last;
     }
 
-    // ----------------------------- LastOrDefault -----------------------------
+    // ----------------------------- LastOrDefault (IE) -----------------------------
     public static <T> T lastOrDefault(Iterable<T> src){
         if(src == null)
             throw new NullArgumentException("src") ;
@@ -738,7 +738,7 @@ public class Enumerable {
         return last;
     }
 
-    // ----------------------------- DefaultIfEmpty -----------------------------
+    // ----------------------------- DefaultIfEmpty (IE) -----------------------------
     // Default of Object types is always null in java.
 
     public static <T> Iterable<T> defaultIfEmpty(Iterable<T> src){
@@ -758,7 +758,7 @@ public class Enumerable {
             for(T i : src){
               yield.returning(i);
               foundAny = true;
-          }
+            }
           if(!foundAny)
               yield.returning(defaultVal);
         };
@@ -868,7 +868,7 @@ public class Enumerable {
         return intersectImp(first, second, compareEquality != null ? compareEquality : new DefaultEquality<>());
     }
 
-    // NOTE: For use, best to Dev use the longer list as the first and shorter as second (to maximise performance).
+    // NOTE: For use, best for Dev to use the longer list as the first and shorter as second (to maximise performance).
     private static <T> Iterable<T> intersectImp(Iterable<T> first, Iterable<T> second, ICompareEquality<T> compareEquality) {
 //        Collection<T> conduit = toList(second);
         return (Yield<T>) y -> {
