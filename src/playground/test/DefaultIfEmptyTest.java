@@ -28,7 +28,8 @@ public class DefaultIfEmptyTest {
 
     @Test
     public void emptySequenceNoDefault(){
-        Assert.assertEquals(null, Enumerable.defaultIfEmpty(new ArrayList<>()));
+        Iterable<?> res = Enumerable.defaultIfEmpty(new ArrayList<>());
+        Assert.assertEquals(null, res);
     }
 
     @Test

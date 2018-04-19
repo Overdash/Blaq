@@ -37,7 +37,7 @@ public class TestGrounds {
     }
 
     @Test
-    public void should_have_expected_values() {
+    public void shouldHaveExpectedValues() {
         ArrayList<String> results = new ArrayList<>();
 
         for (String result : fooBar(ignoreSideEffects)) {
@@ -48,7 +48,7 @@ public class TestGrounds {
     }
 
 
-    @Test public void should_perform_side_effects_in_expected_order() {
+    @Test public void shouldPerformSideEffectsInExpectedOrder() {
         SideEffects sideEffects = mock(SideEffects.class);
 
         Iterable<String> foos = fooBar(sideEffects);
@@ -64,7 +64,7 @@ public class TestGrounds {
 
     }
 
-    @Test public void should_break_out() {
+    @Test public void shouldBreakOut() {
         ArrayList<Integer> results = new ArrayList<>();
         for (Integer number : oneToFive(ignoreSideEffects)) {
             results.add(number);
@@ -73,7 +73,7 @@ public class TestGrounds {
     }
 
 
-    @Test public void should_perform_side_effects_in_expected_order_with_loop() {
+    @Test public void shouldPerformSideEffectsInExpectedOrderWithLoop() {
         SideEffects sideEffects = mock(SideEffects.class);
 
         Iterable<Integer> numbers = oneToFive(sideEffects);
@@ -88,14 +88,14 @@ public class TestGrounds {
         verifyNoMoreInteractions(sideEffects);
     }
 
-    @Test public void iterator_should_not_require_call_to_hasNext() {
+    @Test public void iteratorShouldNotRequireCallToHasNext() {
         Iterable<String> strings = fooBar(ignoreSideEffects);
         Iterator<String> iterator = strings.iterator();
         assertEquals("foo", iterator.next());
         assertEquals("bar", iterator.next());
     }
 
-    @Test public void iterable_should_not_be_stateful() {
+    @Test public void iterableShouldNotBeStateful() {
         Iterable<String> strings = fooBar(ignoreSideEffects);
         assertEquals("foo", strings.iterator().next());
         assertEquals("foo", strings.iterator().next());

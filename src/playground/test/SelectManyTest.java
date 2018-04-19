@@ -18,7 +18,7 @@ public class SelectManyTest {
         Assert.assertEquals(Arrays.asList('3', '5', '2', '0', '1', '5'),
                 b.projectMany(x->
                         Arrays.asList(Arrays
-                                .toString(x.toString().toCharArray()).replaceAll("\\[|]", "")))
+                                .toString(x.toString().toCharArray())))//.replaceAll("\\[|]", "")))
                         );
 
     }

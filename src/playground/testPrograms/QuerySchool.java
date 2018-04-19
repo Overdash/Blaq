@@ -47,7 +47,38 @@ public class QuerySchool {
 
 
     public static void main(String[] args) {
-        BlaqIterable<Student> s = Enumerable.asBlaqIterable(getStudentList());
+        // TODO Task 1: Obtain sequences
+        // TODO - You can create a BlaqIterable using Enumerable.asBlaqIterable(src)(optional)
+
+        // TODO Task 2: simple queries.
+        // TODO Get all the students over the age of 18 & Show 70% of the passmarks of all courses.
+
+        System.out.println("\n**Simple Queries**\n");
+
+        // TODO Task 3: sorting queries
+        // TODO Sort the students in order of their age, then by the number of the courses they are enrolled in
+        System.out.println("\n**Sorting Queries**\n");
+
+        // TODO Task 4: complex queries
+        // TODO Capture all the students younger than 20, and
+        System.out.println("\n**Complex Queries**\n");
+
+        int avgs = 0; // Query here
+        System.out.println("Average: " + avgs);
+
+        // TODO Task 5: Switch
+        // TODO If you were using BlaqIterable, purely use Enumerable (and vice versa) and redo Task 4
+        int avgs2 = 0; // Query here
+        System.out.println("Average 2: " + avgs2);
+
+        // TODO Task 6: Extremely Complex
+        // TODO Get the top most student with the highest average score across all their courses,
+        // TODO Then take the remaining top nine students and rank them
+        // TODO based on the difference of their average against the overall average in the school, whilst only taking
+        // TODO those who got higher than the overall average in consideration.
+        System.out.println("\nFinal Task\n");
+
+        /* BlaqIterable<Student> s = Enumerable.asBlaqIterable(getStudentList());
         IOrderedIterable<Student> orderedS = s.orderByDescending(Student::getAge);//.thenBy(x -> x.getCourses().size());
         List<Grade> grades = getGradeList();
 
@@ -84,9 +115,7 @@ public class QuerySchool {
                 student -> student.getSID(),
                 grade -> grade.getSID(),
                 (student, grade) -> grade.getGrade() > 70));
-        System.out.println("Average 2: " + avgs2);
-
-
+        System.out.println("Average 2: " + avgs2); */
     }
 
     private static class Student {

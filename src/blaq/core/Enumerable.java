@@ -56,6 +56,19 @@ public final class Enumerable {
                 if(predicate.test(item))
                     yield.returning(item);
             };
+        /*Iterator<T> it = source.iterator();
+        new Iterator<T>(){
+
+            @Override
+            public boolean hasNext() {
+                return false;
+            }
+
+            @Override
+            public T next() {
+                while(it.hasNext() && !predicate.test(it.next())){ }
+            }
+        };*/
     }
 
     /**
@@ -150,7 +163,7 @@ public final class Enumerable {
         return (Iterable<T>) EmptyIterable.INSTANCE;
     }
 
-    // ----------------------------- Repeat -----------------------------
+    // ----------------------------- Repeat (DE) -----------------------------
     public static <T> Iterable<T> repeat(T e, int count){
         if(count < 0)
             throw new ArgumentOutOfRangeException("size");
@@ -1101,6 +1114,14 @@ public final class Enumerable {
         if(resultSelector == null)
             throw new NullArgumentException("resultSelector");
 
+        return groupJoinImp(outer, inner, outerKeySelector, innerKeySelector, resultSelector, compareEquality);
+    }
+
+    public static <TOuter, TInner, TKey, TResult> Iterable<TResult> groupJoinImp(Iterable<TOuter> outer, Iterable<TInner> inner,
+                                                                              Function<TOuter, TKey> outerKeySelector,
+                                                                              Function<TInner, TKey> innerKeySelector,
+                                                                              BiFunction<TOuter, Iterable<TInner>, TResult> resultSelector,
+                                                                              ICompareEquality<TKey> compareEquality){
         ILookup<TKey, TInner> lookup = toLookup(inner, innerKeySelector, compareEquality);
         return (Yield<TResult>) yield -> {
             for(TOuter outerVal : outer){
@@ -1109,6 +1130,7 @@ public final class Enumerable {
             }
         };
     }
+
 
     // ----------------------------- Take (DE) -----------------------------
     // Might need CloseableIterator because Yield is a resource (due to threads)
@@ -1371,7 +1393,7 @@ public final class Enumerable {
         return src.createOrderedIterable(keySelector, comparator, true);
     }
 
-    // ----------------------------- Reverse (IE) -----------------------------
+    // ----------------------------- Reverse (DE) -----------------------------
 
     public static <T> Iterable<T> reverse(Iterable<T> src){
         if(src == null)
@@ -1593,11 +1615,11 @@ public final class Enumerable {
 
     // ----------------------------- Average (IE) -----------------------------
 
-    public static double average(Iterable<Number> src){
+    public static <T extends Number> double average(Iterable<T> src){
         if(src == null)
             throw new NullArgumentException("Source");
 
-        Iterator<Number> it = src.iterator();
+        Iterator<T> it = src.iterator();
 
         if(!it.hasNext())
             throw new InvalidOperationException("Sequence containsKey no elements!");
@@ -1606,17 +1628,17 @@ public final class Enumerable {
         long count = 0;
         double total = 0;
         if(n instanceof Long || n instanceof Integer){
-            for(Number item : src){
+            for(T item : src){
                 total += item.longValue();
                 count++;
             }
         } else if(n instanceof Double || n instanceof Float){
-            for(Number item : src){
+            for(T item : src){
                 total += item.doubleValue();
                 count++;
             }
         } else {
-            for(Number item : src){
+            for(T item : src){
                 total += item.shortValue();
                 count++;
             }
@@ -1662,7 +1684,7 @@ public final class Enumerable {
             int count = c.size();
 
             if(index >= count)
-                return null;
+                throw new ArgumentOutOfRangeException("index out of range");
 
             if(src instanceof List)
                 return (T)((List) src).get(index);

@@ -51,4 +51,11 @@ public final class Grouping<K, E> extends ArrayList<E> implements IGrouping<K, E
         return elements.size();
     }
 
+    @Override
+    public String toString(){
+        StringBuilder sb = new StringBuilder(key.toString());
+        sb.append(elements.toString());
+//        sb.append("]");
+        return sb.toString();
+    }
 }
