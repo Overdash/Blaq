@@ -161,7 +161,7 @@ public interface Yield<T> extends Iterable<T> {
         /**
          * Signal no more results left
          */
-        public void signalComplete(){
+        void signalComplete(){
             unchecked(() -> this.dataChannel.put(completed()));
         }
 
@@ -171,7 +171,7 @@ public interface Yield<T> extends Iterable<T> {
             super.finalize();
         }
 
-        public void onClose(Runnable onClose){
+        void onClose(Runnable onClose){
             this.toTunOnClose.add(onClose);
         }
     }
@@ -183,7 +183,7 @@ public interface Yield<T> extends Iterable<T> {
     }
 
     class IfAbsent {
-        public static <T> Then<T> ifAb(Optional<T> opt){// Poor use to Optional, I know.
+        static <T> Then<T> ifAb(Optional<T> opt){// Poor use to Optional, I know.
             return runnable -> {
                 if(!opt.isPresent()) runnable.run();
             };

@@ -40,4 +40,9 @@ public class Tuple2<T1, T2> implements Comparable, Tuple {
     public String toString(StringBuilder sb) {
         return null;
     }
+
+    @Override
+    public String toString() {
+        return "{ " + item1 + " : " + item2 + " }";
+    }
 }

@@ -357,6 +357,10 @@ public interface BlaqIterable<T> extends Iterable<T> {
         return Enumerable.longSum(this, f);
     }
 
+    default short shortSum(Function<T, Short> f){
+        return Enumerable.shortSum(this, f);
+    }
+
     default double doubleSum(Function<T, Double> f){
         return Enumerable.doubleSum(this, f);
     }

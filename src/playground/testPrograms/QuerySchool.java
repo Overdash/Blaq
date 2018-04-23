@@ -1,9 +1,7 @@
 package playground.testPrograms;
 
 import blaq.core.Enumerable;
-import blaq.util.BlaqIterable;
-import blaq.util.BlaqList;
-import blaq.util.IOrderedIterable;
+import blaq.util.*;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -38,10 +36,13 @@ public class QuerySchool {
         return c;
     }
 
-    private static List<Grade> getGradeList(){
+    private static List<Grade> getGradeList(Iterable<Student> students){
         List<Grade> g = new ArrayList<>();
-        for(int i = 0; i < 20; i++)
-            g.add(new Grade(rand.nextInt(6), rand.nextInt(10), (int)(2.5*(rand.nextInt(45)+1))));
+        for(Student s : students){
+            Iterable<Course> courses = s.courses;
+            for(Course c : courses)
+                g.add(new Grade(s.SID, c.CID, (int)(2.5*(rand.nextInt(45)+1))));
+        }
         return g;
     }
 
@@ -50,25 +51,46 @@ public class QuerySchool {
         // TODO Task 1: Obtain sequences
         // TODO - You can create a BlaqIterable using Enumerable.asBlaqIterable(src)(optional)
 
+        BlaqIterable<Student> students = Enumerable.asBlaqIterable(getStudentList());
+        BlaqIterable<Course> courses = Enumerable.asBlaqIterable(getCourseList());
+        BlaqIterable<Grade> grades = Enumerable.asBlaqIterable(getGradeList(students));
+
         // TODO Task 2: simple queries.
         // TODO Get all the students over the age of 18 & Show 70% of the passmarks of all courses.
-
         System.out.println("\n**Simple Queries**\n");
 
+        System.out.println("Students over 18: " + students.where(s -> s.age > 18));
+        System.out.println("70% of pass marks: " + courses.project(c -> (int)(c.passMark * 0.7)));
+
         // TODO Task 3: sorting queries
-        // TODO Sort the students in order of their age, then by the number of the courses they are enrolled in
+        // TODO Sort the students in order of their age, then by the number of the courses they are enrolled in (lowest to highest)
         System.out.println("\n**Sorting Queries**\n");
 
+        IOrderedIterable<Student> orderedAge = students.orderBy(s -> s.age);
+        System.out.println("Students ordered by age: " + orderedAge.toList());
+        System.out.println("Students order by age, then by the # of enrolled courses: " +
+                orderedAge.thenByDescending(s -> s.courses.size()).toList());
+
         // TODO Task 4: complex queries
-        // TODO Capture all the students younger than 20, and
+        // TODO Capture the number of students younger than 20, and with an overall grade of 70 or above
         System.out.println("\n**Complex Queries**\n");
 
-        int avgs = 0; // Query here
+        int avgs = students
+                .where(student -> student.age < 20)
+                .join(grades, student -> student.SID, grade -> grade.SID,
+                        (student, grade) -> grade.grade >= 70)
+                .count(); // Query here
         System.out.println("Average: " + avgs);
 
         // TODO Task 5: Switch
         // TODO If you were using BlaqIterable, purely use Enumerable (and vice versa) and redo Task 4
-        int avgs2 = 0; // Query here
+        int avgs2 = Enumerable.count(
+                Enumerable.join(
+                        Enumerable.where(students, student -> student.age < 20),
+                        grades,
+                        student -> student.SID,
+                        grade -> grade.SID,
+                        (student, grade) -> grade.grade >= 70)); // Query here
         System.out.println("Average 2: " + avgs2);
 
         // TODO Task 6: Extremely Complex
@@ -76,46 +98,27 @@ public class QuerySchool {
         // TODO Then take the remaining top nine students and rank them
         // TODO based on the difference of their average against the overall average in the school, whilst only taking
         // TODO those who got higher than the overall average in consideration.
-        System.out.println("\nFinal Task\n");
+        System.out.println("\n**Final Task**\n");
 
-        /* BlaqIterable<Student> s = Enumerable.asBlaqIterable(getStudentList());
-        IOrderedIterable<Student> orderedS = s.orderByDescending(Student::getAge);//.thenBy(x -> x.getCourses().size());
-        List<Grade> grades = getGradeList();
+        System.out.println(students
+                .join(grades, student -> student.SID, grade -> grade.SID, Tuple2::new).toList());
 
-        // simple queries
-        System.out.println("\nSimple Queries\n");
-        System.out.println("List 1: " + s);
-        System.out.println(s.where(x -> x.getAge() > 18));
-        BlaqIterable<Course> c = Enumerable.asBlaqIterable(getCourseList());
-        System.out.println("List 2: " + c);
-        System.out.println(c.project(x -> x.passMark/3)); // get 70% of the passmark
+        IOrderedIterable<Tuple2<Student, Grade>> sortedByGrades = students
+                .join(grades, student -> student.SID, grade -> grade.SID, Tuple2::new)
+                .orderBy(tuple -> tuple.getItem2().grade);
 
-        // sorting queries
-        System.out.println("\nSorting Queries\n");
-        System.out.println(orderedS.toList());
-        System.out.println(orderedS.thenByDescending(x -> x.getCourses().size()).toList());
-        List<Student> st = getStudentList();
-        BlaqIterable<Student> students = Enumerable.asBlaqIterable(st);
+        Tuple2<Student, Grade> topPair = sortedByGrades.first();
+        System.out.println("Top most student: " + topPair.getItem1() + " with grade: " + topPair.getItem2().grade);
 
-        // complex queries
-        System.out.println("\nComplex Queries\n");
+        double overallAverage = sortedByGrades.average(x -> x.getItem2().grade);
 
-        int avgs = students
-                .where(student -> student.getAge() < 20)
-                .join(grades, Student::getSID, Grade::getSID,
-                        (student, grade) -> grade.getGrade() > 70)
-                .count();
-        System.out.println("Average: " + avgs);
+        BlaqIterable<Tuple2<Student, Grade>> top9 = sortedByGrades.skip(1).take(9)
+                .where(t -> t.getItem2().grade - overallAverage > 0);
 
-        // without BLAQ Collection
-        int avgs2 = Enumerable.count(
-                Enumerable.join(
-                Enumerable.where(students, student -> student.getAge() < 20),
-                grades,
-                student -> student.getSID(),
-                grade -> grade.getSID(),
-                (student, grade) -> grade.getGrade() > 70));
-        System.out.println("Average 2: " + avgs2); */
+        System.out.println("Ranked top 9: ");
+        if(!top9.any())
+            System.out.println("No top 9s above threshold");
+        top9.forEach(e ->System.out.println(e.getItem1()));
     }
 
     private static class Student {
@@ -124,39 +127,25 @@ public class QuerySchool {
         private String name;
         private List<Course> courses;
         private int age;
+        private static String[] firstName = {"Yanira", "Virgil", "Adalberto", "Marjorie", "Sherrie", "Colene",
+                "Glayds", "Nick", "Laurence", "Josef", "Larita", "Cathrine", "Liza", "Berna", "Quinton", "Effie",
+                "Hsiu", "Hector", "Erlene", "Dewayne", "Chiquita", "Shandi", "Lavonda", "Jenee", "Denisse", "Krysten",
+                "Bryanna", "Gerry", "Alline", "Graciela"};
+        private static String[] lastName = {"Windholz", "Ferrier", "Dougan", "Anding", "Stults", "Nell", "Slaugh",
+                "Padillo", "Pellegrini", "Creswell", "Mattison", "Victory", "Frady", "Antilla", "Kershner", "Renfrow",
+                "Fite", "Dineen", "Giraud", "Perras", "Winters", "Henrichs", "Dobrowolski", "Heckler", "Rupe", "Toft",
+                "Dimmitt", "Longino", "Mathieu", "Lucke"};
 
         public Student(int id, List<Course> c, int age){
             SID = id;
-            this.name = "Student " + id;
+            this.name = firstName[rand.nextInt(firstName.length)] + " " + lastName[rand.nextInt(lastName.length)];
             courses = c;
             this.age = age;
         }
 
-        public List<Course> getCourses() {
-            return courses;
-        }
-
-        public void setCourses(List<Course> courses) {
-            this.courses = courses;
-        }
-
-        public int getAge() {
-            return age;
-        }
-
-        public int getSID() {
-            return SID;
-        }
-
-        public String getName() {
-            return name;
-        }
-
-        public void setName(String s){ name = s; }
-
         @Override
         public String toString() {
-            return name + ": Aged - " + age + ", On courses: " + courses + "\n";
+            return "ID: " + SID + " ; Name: " + name + " ; Aged - " + age + " ; On " + courses.size() + " Courses \n";
         }
     }
 
@@ -174,25 +163,9 @@ public class QuerySchool {
             passMark = pass;
         }
 
-        public int getCID() {
-            return CID;
-        }
-
-        public String getCourseName() {
-            return courseName;
-        }
-
-        public String getFaculty() {
-            return faculty;
-        }
-
-        public int getPassMark() {
-            return passMark;
-        }
-
         @Override
         public String toString() {
-            return courseName + " " + faculty + ": Require " + passMark + " marks";
+            return courseName + " " + faculty + ": Require " + passMark + " marks to pass";
         }
     }
 
@@ -208,16 +181,6 @@ public class QuerySchool {
             grade = g;
         }
 
-        public int getGrade() {
-            return grade;
-        }
-
-        public int getCID() {
-            return CID;
-        }
-
-        public int getSID() {
-            return SID;
-        }
+        public String toString(){return "ID: " + SID + " Course ID: " + CID + " Grade: " + grade;}
     }
 }

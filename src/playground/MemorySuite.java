@@ -1,6 +1,10 @@
 package playground;
 
 import blaq.core.Enumerable;
+import blaq.util.BlaqIterable;
+import blaq.util.BlaqList;
+import blaq.util.Tuple;
+import blaq.util.Tuple2;
 
 import java.util.*;
 
@@ -72,11 +76,11 @@ public class MemorySuite {
         /*List<Integer> t = Arrays.asList(14, 2, 3, 42, 5, 9, 2, 94, 2, 31, 3);
         BlaqIterable<Integer> b1 = Enumerable.asBlaqIterable(t);
         System.out.println(b1.orderBy(x -> x).toList());*/
-//        memoryTest();
-        defferedExecTest();
+        memoryTest();
+        deferredExecTest();
     }
 
-    private static void defferedExecTest(){
+    private static void deferredExecTest(){
         List<String> l = new ArrayList<>();
 
         l.add("Joy");

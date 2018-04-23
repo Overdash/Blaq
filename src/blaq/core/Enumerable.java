@@ -627,7 +627,7 @@ public final class Enumerable {
         for(T i : src){
             if(predicate.test(i)){
                 if(found)
-                    throw new InvalidOperationException("Sequence containsKey multiple matching elements");
+                    throw new InvalidOperationException("Sequence contains multiple matching elements");
                 found = true;
                 e = i;
             }
@@ -1204,9 +1204,12 @@ public final class Enumerable {
     private static <T> Iterable<T> skipImp(Iterable<T> src, int count) {
         return (Yield<T>) yield -> {
             Iterator<T> it = src.iterator();
-            for(int i = 0; i < count; i++)
+            for(int i = 0; i < count; i++) {
                 if(!it.hasNext())
                     yield.breaking();
+                else
+                    it.next();
+            }
 
             while(it.hasNext())
                 yield.returning(it.next());
@@ -1429,9 +1432,9 @@ public final class Enumerable {
         int sum = 0;
         for(T item : src){
             if(sum < Integer.MAX_VALUE)
-                sum += selector.apply(item);
+                sum += selector.apply(item) == null ? 0 : selector.apply(item);
             else
-                throw new ArithmeticException("Overflow exception.");
+                throw new ArithmeticException("Integer Overflow exception.");
         }
         return sum;
     }
@@ -1446,12 +1449,32 @@ public final class Enumerable {
         if(selector == null)
             throw new NullArgumentException("selector");
 
-        long sum = 0;
+        long sum = 0L;
         for(T item : src){
             if(sum < Long.MAX_VALUE)
-                sum += selector.apply(item);
+                sum += selector.apply(item) == null ? 0L : selector.apply(item);
             else
-                throw new ArithmeticException("Overflow exception.");
+                throw new ArithmeticException("Long Overflow exception.");
+        }
+        return sum;
+    }
+
+    public static short shortSum(Iterable<Short> src){
+        return shortSum(src, x -> x);
+    }
+
+    public static <T> short shortSum(Iterable<T> src, Function<T, Short> selector){
+        if(src == null)
+            throw new NullArgumentException("source");
+        if(selector == null)
+            throw new NullArgumentException("selector");
+
+        short sum = 0;
+        for(T item : src){
+            if(sum < Short.MAX_VALUE)
+                sum += selector.apply(item) == null ? 0 : selector.apply(item);
+            else
+                throw new ArithmeticException("Short Overflow exception.");
         }
         return sum;
     }
@@ -1466,9 +1489,9 @@ public final class Enumerable {
         if(selector == null)
             throw new NullArgumentException("selector");
 
-        double sum = 0;
+        double sum = 0d;
         for(T item : src)
-            sum += selector.apply(item);
+            sum += selector.apply(item) == null ? 0d : selector.apply(item);
         return sum;
     }
 
@@ -1483,7 +1506,7 @@ public final class Enumerable {
         if(selector == null)
             throw new NullArgumentException("selector");
 
-        float sum = 0;
+        float sum = 0f;
         for(T item : src)
             sum += selector.apply(item);
         return sum;
